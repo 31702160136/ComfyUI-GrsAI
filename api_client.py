@@ -157,6 +157,7 @@ class GrsaiAPI:
             "prompt": prompt,
             "urls": urls,
             "shutProgress": True,
+            "cdn": "zh",
         }
 
         # 动态添加所有非空的可选参数
@@ -248,6 +249,7 @@ class GrsaiAPI:
             "prompt": prompt,
             "urls": urls,
             "shutProgress": True,
+            "cdn": "zh",
         }
 
         # 动态添加所有非空的可选参数
