@@ -62,22 +62,27 @@ class GrsaiConfig:
             "方法一 (推荐): 创建 .env 文件\n"
             f"1. 在本插件的根目录中创建一个名为 .env 的文件。\n"
             f"   插件目录: {module_dir}\n"
-            "2. 在文件中添加以下内容 (将your-api-key替换为您的真实密钥):\n"
-            "   GRSAI_API_KEY=your-api-key-here\n\n"
-            "方法二: 设置环境变量\n"
+            "2. 在文件中添加以下内容 (将your_grsai_api_key_here替换为您的真实密钥):\n"
+            "   GRSAI_API_KEY=your_grsai_api_key_here\n\n"
+            "方法二: 设置环境变量\n\n"
             "1. 设置一个名为 GRSAI_API_KEY 的系统环境变量，值为您的密钥。\n\n"
-            "密钥获取地址: https://grsai.com"
+            "🔑 密钥获取地址: https://grsai.com\n\n"
+            "💡 设置完毕后请重启ComfyUI。需要完全重启程序，而不是在网页中重启。\n\n"
         )
 
     def get_api_key(self) -> Optional[str]:
         """
         从环境变量或.env文件获取API密钥。
-        如果找到，返回密钥字符串。
-        如果未找到，返回None。
+        如果找到且以sk-开头，返回密钥字符串。
+        如果未找到或格式不正确，返回None。
         """
         api_key = os.getenv("GRSAI_API_KEY")
+
         if api_key and api_key.strip():
-            return api_key.strip()
+            api_key = api_key.strip()
+            # 检查API密钥是否以sk-开头
+            if api_key.startswith("sk-"):
+                return api_key
         return None
 
     def get_config(self, key: str, default: Any = None) -> Any:

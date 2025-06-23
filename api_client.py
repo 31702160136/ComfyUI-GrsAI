@@ -171,6 +171,7 @@ class GrsaiAPI:
             if value is not None and value != "":
                 payload[key] = value
 
+        print("🎨 开始生成图像...")
         # 发送请求
         try:
             response = self._make_request("POST", "/v1/draw/completions", data=payload)
@@ -182,7 +183,10 @@ class GrsaiAPI:
 
         status = response["status"]
         if status != "succeeded":
+            print(f"🎨 图像生成失败: {response['id']}")
             raise GrsaiAPIError(f"图像生成失败: {response['id']}")
+
+        print("🎨 图像生成成功, 开始下载图像...")
 
         results = response["results"]
         resultsUrls = [result["url"] for result in results]
@@ -263,6 +267,7 @@ class GrsaiAPI:
             if value is not None and value != "":
                 payload[key] = value
 
+        print("🎨 开始生成图像...")
         # 发送请求
         try:
             response = self._make_request("POST", "/v1/draw/flux", data=payload)
@@ -271,6 +276,13 @@ class GrsaiAPI:
             if isinstance(e, GrsaiAPIError):
                 raise e
             raise GrsaiAPIError(format_error_message(e, "图像生成"))
+
+        status = response["status"]
+        if status != "succeeded":
+            print(f"🎨 图像生成失败: {response['id']}")
+            raise GrsaiAPIError(f"图像生成失败: {response['id']}")
+
+        print("🎨 图像生成成功, 开始下载图像...")
 
         image_url = response["url"]
         print(image_url)

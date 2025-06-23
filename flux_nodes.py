@@ -56,7 +56,7 @@ class SuppressFalLogs:
             logger.setLevel(original_level)
 
 
-class _FluxKontextNodeBase:
+class _GrsaiFluxKontextNodeBase:
     """
     所有Flux-Kontext节点的内部基类，处理通用逻辑。
     """
@@ -136,7 +136,7 @@ class _FluxKontextNodeBase:
 
 
 # 节点1: 文生图
-class FluxKontext_TextToImage(_FluxKontextNodeBase):
+class GrsaiFluxKontext_TextToImage(_GrsaiFluxKontextNodeBase):
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -208,7 +208,7 @@ class FluxKontext_TextToImage(_FluxKontextNodeBase):
 
 
 # 节点2: 图生图 (单图)
-class FluxKontext_ImageToImage(_FluxKontextNodeBase):
+class GrsaiFluxKontext_ImageToImage(_GrsaiFluxKontextNodeBase):
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -257,7 +257,9 @@ class FluxKontext_ImageToImage(_FluxKontextNodeBase):
 
         grsai_key = default_config.get_api_key()
         if not grsai_key:
-            return self._create_error_result("Error: GRSAI_KEY not available", image)
+            return self._create_error_result(
+                default_config.api_key_error_message, image
+            )
 
         os.environ["GRSAI_KEY"] = grsai_key
         temp_file_path = None
@@ -315,7 +317,7 @@ class FluxKontext_ImageToImage(_FluxKontextNodeBase):
 
 
 # 节点3: 多图生图
-class FluxKontext_MultiImageToImage(_FluxKontextNodeBase):
+class GrsaiFluxKontext_MultiImageToImage(_GrsaiFluxKontextNodeBase):
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -448,13 +450,13 @@ class FluxKontext_MultiImageToImage(_FluxKontextNodeBase):
 
 
 NODE_CLASS_MAPPINGS = {
-    "FluxKontext_TextToImage": FluxKontext_TextToImage,
-    "FluxKontext_ImageToImage": FluxKontext_ImageToImage,
-    "FluxKontext_MultiImageToImage": FluxKontext_MultiImageToImage,
+    "GrsaiFluxKontext_TextToImage": GrsaiFluxKontext_TextToImage,
+    "GrsaiFluxKontext_ImageToImage": GrsaiFluxKontext_ImageToImage,
+    "GrsaiFluxKontext_MultiImageToImage": GrsaiFluxKontext_MultiImageToImage,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "FluxKontext_TextToImage": "🎨 GrsAI Flux.1 Kontext - Text to Image",
-    "FluxKontext_ImageToImage": "🎨 GrsAI Flux.1 Kontext - Editing",
-    "FluxKontext_MultiImageToImage": "🎨 GrsAI Flux.1 Kontext - Editing (Multi Image)",
+    "GrsaiFluxKontext_TextToImage": "🎨 GrsAI Flux.1 Kontext - Text to Image",
+    "GrsaiFluxKontext_ImageToImage": "🎨 GrsAI Flux.1 Kontext - Editing",
+    "GrsaiFluxKontext_MultiImageToImage": "🎨 GrsAI Flux.1 Kontext - Editing (Multi Image)",
 }
