@@ -81,16 +81,16 @@ ComfyUI-GrsAI 是一个专业的 ComfyUI 扩展，提供完整的多模型图像
 如果安装报错：This action is not allowed with this security level configuration.
 请参考以下教程
 
-## 步骤 1：定位配置文件
+#### 步骤 1：定位配置文件
 根据 ComfyUI-Manager 版本，配置文件路径不同，下面是不同版本的文件位置
 
-## Manager 3.0 版本以上教程
+#### Manager 3.0 版本以上教程
 当你的 ComfyUI Manger 在 3.0 版本以上时，请查找下面位置的文件 ComfyUI/user/default/ComfyUI-Manager/config.ini
 
-## Manager 3.0 版本以下教程
+#### Manager 3.0 版本以下教程
 如果你的 ComfyUI Manger 在 3.0 版本以下，请查找下面位置的文件 ComfyUI/custom_nodes/ComfyUI-Manager/config.ini
 
-## 步骤 2：修改安全参数
+#### 步骤 2：修改安全参数
 用文本编辑器打开 config.ini，找到：
 
 security_level = normal
@@ -99,7 +99,9 @@ security_level = normal
 
 security_level = weak
 
-步骤 3：重启服务
+#### 步骤 3：
+
+重启服务
 
 ComfyUI 桌面版： 完全退出 ComfyUI 后重新启动
 
