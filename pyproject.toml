@@ -1,0 +1,20 @@
+[project]
+name = "ComfyUI-GrsAI"
+description = "GrsAI API supporting text-to-image and multi-image-to-image generation. The 'pro' model costs only about RMB 0.035 (US$0.004) per image."
+version = "1.0.7"
+license = { file = "LICENSE" }
+dependencies = [
+    "requests",
+    "python-dotenv",
+    "fal-client",
+    "httpx",
+    "httpcore"
+]
+
+[project.urls]
+Repository = "https://github.com/31702160136/ComfyUI-GrsAI"
+
+[tool.comfy]
+PublisherId = "nokugua"
+DisplayName = "GrsAI api in ComfyUI"
+Icon = "https://raw.githubusercontent.com/31702160136/ComfyUI-GrsAI/main/images/text-to-image-demo.png" 

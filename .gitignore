@@ -1,0 +1,41 @@
+# 开发相关文件
+/a-reference
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# 环境和配置文件 (保护真实配置，但包含模板)
+.env.local
+.env.*.local
+# 注意：.env 模板文件需要被包含在仓库中，但用户的真实配置应该被保护
+
+# 测试和输出
+test_outputs/
+*.log
+
+# IDE和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+test_all_nodes.py
+/test
+test_simple.py
+
+# Build artifacts
+*.zip
