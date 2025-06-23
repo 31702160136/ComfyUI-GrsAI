@@ -10,6 +10,7 @@ import tempfile
 import logging
 from typing import Any, Tuple, Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 # 尝试相对导入，如果失败则使用绝对导入
 try:
@@ -144,7 +145,7 @@ class FluxKontext_TextToImage(_FluxKontextNodeBase):
                     "STRING",
                     {
                         "multiline": True,
-                        "default": "A colorful and stylized mechanical bird sculpture, with bright blue and green body, orange accent stripes, and a white head. The bird has a smooth, polished surface and is positioned as if perched on a branch. The sculpture's pieces are segmented, giving it a modular, toy-like appearance, with visible joints between the segments. The background is a soft, blurred green to evoke a natural, outdoors feel. The word 'FLUX' is drawn with a large white touch on it, with distinct textures",
+                        "default": "The character is sitting cross-legged on the sofa, and the Dalmatian is lying on the blanket sleeping.",
                     },
                 ),
                 "model": (
@@ -453,7 +454,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "FluxKontext_TextToImage": "Flux.1 Kontext - Text to Image",
-    "FluxKontext_ImageToImage": "Flux.1 Kontext - Editing",
-    "FluxKontext_MultiImageToImage": "Flux.1 Kontext - Editing (Multi Image)",
+    "FluxKontext_TextToImage": "🎨 GrsAI Flux.1 Kontext - Text to Image",
+    "FluxKontext_ImageToImage": "🎨 GrsAI Flux.1 Kontext - Editing",
+    "FluxKontext_MultiImageToImage": "🎨 GrsAI Flux.1 Kontext - Editing (Multi Image)",
 }

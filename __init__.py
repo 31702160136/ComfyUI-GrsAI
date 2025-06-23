@@ -6,6 +6,7 @@ from .flux_nodes import (
     NODE_CLASS_MAPPINGS as FLUX_NODE_CLASS_MAPPINGS,
     NODE_DISPLAY_NAME_MAPPINGS as FLUX_NODE_DISPLAY_NAME_MAPPINGS,
 )
+
 from .gpt_image_nodes import (
     NODE_CLASS_MAPPINGS as GPT_IMAGE_NODE_CLASS_MAPPINGS,
     NODE_DISPLAY_NAME_MAPPINGS as GPT_IMAGE_NODE_DISPLAY_NAME_MAPPINGS,
@@ -29,8 +30,8 @@ __all__ = [
 ]
 
 # 版本信息 - 必须与 pyproject.toml 中的版本保持完全一致
-__version__ = "1.0.7"
+__version__ = "1.0.1"
 
 # 插件作者信息
 __author__ = "ComfyUI-GrsAI Team"
-__description__ = "GrsAI图像生成节点 - 支持GPT Image - 支持Flux.1 Kontext"
+__description__ = "GrsAI图像生成节点 - 支持GPT Image，Flux.1 Kontext"

@@ -4,14 +4,12 @@ ComfyUI节点实现
 """
 
 import torch
-import random
 import os
 import tempfile
 import logging
 from typing import Any, Tuple, Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-
 
 # 尝试相对导入，如果失败则使用绝对导入
 try:
@@ -301,6 +299,6 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "GPTImage_TextToImage": "GPT Image - Text to Image",
-    "GPTImage_ImageToImage": "GPT Image - Image to Image",
+    "GPTImage_TextToImage": "🎨 GrsAI GPT Image - Text to Image",
+    "GPTImage_ImageToImage": "🎨 GrsAI GPT Image - Image to Image",
 }
