@@ -150,6 +150,7 @@ class GrsaiFluxKontext_TextToImage(_GrsaiFluxKontextNodeBase):
                 ),
                 "model": (
                     [
+                        "flux-dev",
                         "flux-pro-1.1",
                         "flux-pro-1.1-ultra",
                         "flux-kontext-pro",
