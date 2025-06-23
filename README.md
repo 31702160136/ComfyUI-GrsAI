@@ -75,7 +75,7 @@ ComfyUI-GrsAI 是一个专业的 ComfyUI 扩展，提供完整的多模型图像
 
 1. 在 ComfyUI 界面中打开 **ComfyUI Manager**
 2. 点击 **"Install via Git URL"**
-3. 输入：`https://github.com/LKbaba/ComfyUI-GrsAI.git`
+3. 输入：`https://github.com/31702160136/ComfyUI-GrsAI.git`
 4. 第一次重启安装完成后，关闭ComfyUI，填写 .env 文件中的api-key。再重启一遍 ComfyUI 即可运行。
 
 ### 方法二：手动安装
@@ -87,7 +87,7 @@ ComfyUI-GrsAI 是一个专业的 ComfyUI 扩展，提供完整的多模型图像
 cd ComfyUI/custom_nodes/
 
 # 克隆项目
-git clone https://github.com/LKbaba/ComfyUI-GrsAI.git
+git clone https://github.com/31702160136/ComfyUI-GrsAI.git
 cd ComfyUI-GrsAI
 
 # 安装依赖
