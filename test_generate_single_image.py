@@ -67,7 +67,7 @@ def test_generate_single_image_function():
         },
         {
             "name": "复杂提示词测试",
-            "prompt": 'Extreme close-up of a single tiger eye, direct frontal view. Detailed iris and pupil. Sharp focus on eye texture and color. Natural lighting to capture authentic eye shine and depth. The word "FLUX" is painted over it in big, white brush strokes with visible texture.',
+            "prompt": "A colorful and stylized mechanical bird sculpture, with bright blue and green body, orange accent stripes, and a white head. The bird has a smooth, polished surface and is positioned as if perched on a branch. The sculpture's pieces are segmented, giving it a modular, toy-like appearance, with visible joints between the segments. The background is a soft, blurred green to evoke a natural, outdoors feel. The word 'FLUX' is drawn with a large white touch on it, with distinct textures",
             "model": "flux-kontext-max",
             "seed": 0,  # 将自动生成随机种子
             "aspect_ratio": "4:3",

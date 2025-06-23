@@ -96,7 +96,7 @@ class _FluxKontextNodeBase:
         num_images: int,
         seed: int,
         model: str,
-        urls: list[str],
+        urls: list[str] = [],
         **kwargs,
     ) -> Tuple[List[Any], List[str], List[str]]:
         results_pil, result_urls, errors = [], [], []
@@ -152,7 +152,7 @@ class FluxKontext_TextToImage(_FluxKontextNodeBase):
                     "STRING",
                     {
                         "multiline": True,
-                        "default": 'Extreme close-up of a single tiger eye, direct frontal view. Detailed iris and pupil. Sharp focus on eye texture and color. Natural lighting to capture authentic eye shine and depth. The word "FLUX" is painted over it in big, white brush strokes with visible texture.',
+                        "default": "A colorful and stylized mechanical bird sculpture, with bright blue and green body, orange accent stripes, and a white head. The bird has a smooth, polished surface and is positioned as if perched on a branch. The sculpture's pieces are segmented, giving it a modular, toy-like appearance, with visible joints between the segments. The background is a soft, blurred green to evoke a natural, outdoors feel. The word 'FLUX' is drawn with a large white touch on it, with distinct textures",
                     },
                 ),
                 "model": (
@@ -164,7 +164,7 @@ class FluxKontext_TextToImage(_FluxKontextNodeBase):
                     ],
                     {"default": "flux-kontext-max"},
                 ),
-                # "num_images": ([1, 2, 3, 4], {"default": 1}),
+                "num_images": ([1, 2, 3, 4], {"default": 1}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
                 "guidance_scale": (
                     "FLOAT",
@@ -189,9 +189,7 @@ class FluxKontext_TextToImage(_FluxKontextNodeBase):
         if not grsai_api_key:
             return self._create_error_result(default_config.api_key_error_message)
 
-        # num_images = kwargs.pop("num_images")
-        num_images = 1
-
+        num_images = kwargs.pop("num_images")
         seed = kwargs.pop("seed")
         final_prompt = kwargs.pop("prompt")
         model = kwargs.pop("model")
@@ -234,7 +232,7 @@ class FluxKontext_ImageToImage(_FluxKontextNodeBase):
                     ["flux-kontext-pro", "flux-kontext-max"],
                     {"default": "flux-kontext-max"},
                 ),
-                # "num_images": ([1, 2, 3, 4], {"default": 1}),
+                "num_images": ([1, 2, 3, 4], {"default": 1}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
                 # "guidance_scale": (
                 #     "FLOAT",
@@ -298,8 +296,7 @@ class FluxKontext_ImageToImage(_FluxKontextNodeBase):
             if temp_file_path and os.path.exists(temp_file_path):
                 os.unlink(temp_file_path)
 
-        # num_images = kwargs.pop("num_images")
-        num_images = 1
+        num_images = kwargs.pop("num_images")
         seed = kwargs.pop("seed")
         model = kwargs.pop("model")
         kwargs.pop("prompt")
@@ -347,7 +344,7 @@ class FluxKontext_MultiImageToImage(_FluxKontextNodeBase):
                     ["flux-kontext-pro", "flux-kontext-max"],
                     {"default": "flux-kontext-max"},
                 ),
-                # "num_images": ([1, 2, 3, 4], {"default": 1}),
+                "num_images": ([1, 2, 3, 4], {"default": 1}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
                 # "guidance_scale": (
                 #     "FLOAT",
@@ -430,8 +427,7 @@ class FluxKontext_MultiImageToImage(_FluxKontextNodeBase):
                 if os.path.exists(path):
                     os.unlink(path)
 
-        # num_images = kwargs.pop("num_images")
-        num_images = 1
+        num_images = kwargs.pop("num_images")
         seed = kwargs.pop("seed")
         model = kwargs.pop("model")
         kwargs.pop("prompt")
