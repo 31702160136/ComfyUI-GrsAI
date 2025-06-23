@@ -268,7 +268,7 @@ GRSAI_API_KEY=your_grsai_api_key_here
 - **GrsAI官网**: [grsai.com](https://grsai.com)
 - **ComfyUI**: [github.com/comfyanonymous/ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 - **Flux模型**: [Black Forest Labs](https://bfl.ai/)
-- **GPT模型**: [Black Forest Labs](https://openai.com/)
+- **GPT模型**: [openai](https://openai.com/)
 
 ---
 
