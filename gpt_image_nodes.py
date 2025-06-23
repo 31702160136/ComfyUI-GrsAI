@@ -12,10 +12,6 @@ from typing import Any, Tuple, Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-try:
-    import fal_client
-except ImportError:
-    fal_client = None
 
 # 尝试相对导入，如果失败则使用绝对导入
 try:
@@ -42,8 +38,6 @@ class SuppressFalLogs:
         self.loggers_to_suppress = [
             "httpx",
             "httpcore",
-            "fal_client",
-            "fal",
             "urllib3.connectionpool",
         ]
         self.original_levels = {}

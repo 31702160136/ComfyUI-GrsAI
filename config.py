@@ -80,12 +80,6 @@ class GrsaiConfig:
             return api_key.strip()
         return None
 
-    def get_fal_key(self) -> Optional[str]:
-        """获取内置的FAL_KEY（用户无需配置）"""
-        # 请珍惜开源项目，乱用这个fal 密钥的人，祝你孤独终老。
-        # Please cherish open-source projects. For those who abuse this fal key, may you be forever alone.
-        return ""
-
     def get_config(self, key: str, default: Any = None) -> Any:
         """获取配置项"""
         return self.config.get(key, default)

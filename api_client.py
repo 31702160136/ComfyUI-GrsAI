@@ -6,7 +6,6 @@ GrsAI API客户端
 import json
 import time
 import requests
-import re
 from typing import Optional, Dict, Any, List, Tuple, TYPE_CHECKING
 from concurrent.futures import ThreadPoolExecutor, as_completed
 

@@ -10,12 +10,6 @@ import tempfile
 import logging
 from typing import Any, Tuple, Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
-
-try:
-    import fal_client
-except ImportError:
-    fal_client = None
 
 # 尝试相对导入，如果失败则使用绝对导入
 try:
@@ -42,8 +36,6 @@ class SuppressFalLogs:
         self.loggers_to_suppress = [
             "httpx",
             "httpcore",
-            "fal_client",
-            "fal",
             "urllib3.connectionpool",
         ]
         self.original_levels = {}
@@ -260,12 +252,6 @@ class FluxKontext_ImageToImage(_FluxKontextNodeBase):
         if not grsai_api_key:
             return self._create_error_result(
                 default_config.api_key_error_message, image
-            )
-
-        if fal_client is None:
-            return self._create_error_result(
-                "Error: 'fal-client' not installed. Please run pip install -r requirements.txt",
-                image,
             )
 
         grsai_key = default_config.get_api_key()
