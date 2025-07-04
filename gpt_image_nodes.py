@@ -13,7 +13,7 @@ from pathlib import Path
 
 # 尝试相对导入，如果失败则使用绝对导入
 try:
-    from .upload import upload_file
+    from .upload import upload_file_zh
     from .api_client import GrsaiAPI, GrsaiAPIError
     from .config import default_config
     from .utils import (
@@ -23,7 +23,7 @@ try:
         tensor_to_pil,
     )
 except ImportError:
-    from upload import upload_file
+    from upload import upload_file_zh
     from api_client import GrsaiAPI, GrsaiAPIError
     from config import default_config
     from utils import download_image, pil_to_tensor, format_error_message, tensor_to_pil
@@ -244,7 +244,7 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
                     temp_files.append(temp_file.name)
 
                 with SuppressFalLogs():
-                    uploaded_urls.append(upload_file(temp_files[-1]))
+                    uploaded_urls.append(upload_file_zh(temp_files[-1]))
 
             if not uploaded_urls:
                 return self._create_error_result(

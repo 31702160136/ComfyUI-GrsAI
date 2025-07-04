@@ -185,6 +185,7 @@ class GrsaiAPI:
         status = response["status"]
         if status != "succeeded":
             print(f"🎨 图像生成失败: {response['id']}")
+            print(json.dumps(response, indent=4))
             raise GrsaiAPIError(f"图像生成失败: {response['id']}")
 
         print("🎨 图像生成成功, 开始下载图像...")
@@ -282,6 +283,7 @@ class GrsaiAPI:
         status = response["status"]
         if status != "succeeded":
             print(f"🎨 图像生成失败: {response['id']}")
+            print(json.dumps(response, indent=4))
             raise GrsaiAPIError(f"图像生成失败: {response['id']}")
 
         print("🎨 图像生成成功, 开始下载图像...")
