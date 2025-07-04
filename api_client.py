@@ -172,7 +172,7 @@ class GrsaiAPI:
             if value is not None and value != "":
                 payload[key] = value
 
-        print(json.dumps(payload, indent=4))
+        print(json.dumps(payload, indent=4, ensure_ascii=False))
         print("🎨 开始生成图像...")
         # 发送请求
         try:
@@ -186,7 +186,7 @@ class GrsaiAPI:
         status = response["status"]
         if status != "succeeded":
             print(f"🎨 图像生成失败: {response['id']}")
-            print(json.dumps(response, indent=4))
+            print(json.dumps(response, indent=4, ensure_ascii=False))
             raise GrsaiAPIError(f"图像生成失败: {response['id']}")
 
         print("🎨 图像生成成功, 开始下载图像...")
@@ -271,7 +271,7 @@ class GrsaiAPI:
             if value is not None and value != "":
                 payload[key] = value
 
-        print(json.dumps(payload, indent=4))
+        print(json.dumps(payload, indent=4, ensure_ascii=False))
         print("🎨 开始生成图像...")
         # 发送请求
         try:
@@ -285,7 +285,7 @@ class GrsaiAPI:
         status = response["status"]
         if status != "succeeded":
             print(f"🎨 图像生成失败: {response['id']}")
-            print(json.dumps(response, indent=4))
+            print(json.dumps(response, indent=4, ensure_ascii=False))
             raise GrsaiAPIError(f"图像生成失败: {response['id']}")
 
         print("🎨 图像生成成功, 开始下载图像...")

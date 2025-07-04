@@ -39,7 +39,7 @@ def download_image(url: str, timeout: int = 30) -> Optional[Image.Image]:
 
 
 def tensor_to_pil(tensor: torch.Tensor) -> List[Image.Image]:
-    """将torch张量（B, H, W, C）转换为PIL图像列表，使其更健壮"""
+    """将torch张量（B, H, W, C）转换为PIL图像列表，支持RGBA透明通道"""
     if not isinstance(tensor, torch.Tensor):
         return []
 
@@ -54,32 +54,98 @@ def tensor_to_pil(tensor: torch.Tensor) -> List[Image.Image]:
         # 转换为numpy数组并缩放到[0, 255]
         img_np = (img_tensor.cpu().numpy() * 255).astype(np.uint8)
 
-        # 创建PIL图像
-        images.append(Image.fromarray(img_np, "RGB"))
+        # 根据通道数创建相应格式的PIL图像
+        if img_tensor.shape[2] == 4:  # RGBA
+            images.append(Image.fromarray(img_np, "RGBA"))
+        else:  # RGB
+            images.append(Image.fromarray(img_np, "RGB"))
 
     return images
 
 
-def pil_to_tensor(pil_images: Union[Image.Image, List[Image.Image]]) -> torch.Tensor:
+def handle_transparent_background(
+    image: Image.Image, background_color: Tuple[int, int, int] = (0, 0, 0)
+) -> Image.Image:
+    """
+    处理透明背景的图像
+
+    Args:
+        image: PIL图像对象
+        background_color: 背景颜色RGB元组，默认为黑色(0, 0, 0)
+
+    Returns:
+        处理后的RGB图像
+    """
+    if image.mode == "RGBA":
+        # 创建指定颜色的背景
+        background = Image.new("RGB", image.size, background_color)
+        # 使用alpha通道进行合成
+        image = Image.alpha_composite(background.convert("RGBA"), image).convert("RGB")
+    elif image.mode != "RGB":
+        image = image.convert("RGB")
+
+    return image
+
+
+def pil_to_tensor(
+    pil_images: Union[Image.Image, List[Image.Image]],
+    background_color: Union[Tuple[int, int, int], bool, None] = None,
+    preserve_transparency: Optional[bool] = None,
+) -> torch.Tensor:
     """
     将单个PIL图像或PIL图像列表转换为ComfyUI图像张量
+
+    Args:
+        pil_images: PIL图像或PIL图像列表
+        background_color: 向后兼容参数 - 透明背景替换颜色，如果为tuple则不保留透明度
+        preserve_transparency: 是否保留透明度信息，默认为True（除非指定了background_color）
+
+    Returns:
+        ComfyUI张量格式的图像
     """
+    # 向后兼容性处理
+    if background_color is not None and isinstance(background_color, tuple):
+        # 旧API调用：指定了背景颜色，不保留透明度
+        preserve_transparency = False
+        bg_color = background_color
+    else:
+        # 新API调用：默认保留透明度
+        if preserve_transparency is None:
+            preserve_transparency = True
+        bg_color = (0, 0, 0)  # 默认黑色背景
     if not isinstance(pil_images, list):
         pil_images = [pil_images]
 
     tensors = []
     for pil_image in pil_images:
-        # 确保图像是RGB格式
-        if pil_image.mode != "RGB":
-            pil_image = pil_image.convert("RGB")
+        # 如果保留透明度且图像有alpha通道，则保持RGBA格式
+        if preserve_transparency and pil_image.mode == "RGBA":
+            # 保持RGBA格式
+            processed_image = pil_image
+        elif preserve_transparency and pil_image.mode in ("LA", "P"):
+            # 将其他带透明度的格式转换为RGBA
+            processed_image = pil_image.convert("RGBA")
+        else:
+            # 对于其他情况，转换为RGB（保持原有行为）
+            if pil_image.mode == "RGBA":
+                processed_image = handle_transparent_background(pil_image, bg_color)
+            elif pil_image.mode != "RGB":
+                processed_image = pil_image.convert("RGB")
+            else:
+                processed_image = pil_image
 
-        img_array = np.array(pil_image).astype(np.float32) / 255.0
+        img_array = np.array(processed_image).astype(np.float32) / 255.0
         tensor = torch.from_numpy(img_array)[None,]
         tensors.append(tensor)
 
     if not tensors:
         # 如果列表为空，返回一个空的占位符张量
-        return torch.empty((0, 1, 1, 3), dtype=torch.float32)
+        channels = (
+            4
+            if (pil_images and pil_images[0].mode == "RGBA" and preserve_transparency)
+            else 3
+        )
+        return torch.empty((0, 1, 1, channels), dtype=torch.float32)
 
     return torch.cat(tensors, dim=0)
 

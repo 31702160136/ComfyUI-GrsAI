@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+import json
 
 # 添加当前目录到Python路径，以便导入模块
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -123,6 +124,12 @@ def test_upload_file_zh_error_scenarios():
     success_count = 0
     total_tests = 0
 
+    aa = {"prompt": "你会后悔会撒娇来上课垃圾费"}
+    print(json.dumps(aa, indent=2))
+
+    print(aa)
+
+    return
     # 测试1: 空文件路径
     print("\n📝 测试 1: 空文件路径")
     print("-" * 40)
@@ -331,8 +338,8 @@ def main():
 
     # 运行各项测试
     tests = [
-        ("基本上传功能", test_upload_file_zh_basic),
-        # ("错误场景", test_upload_file_zh_error_scenarios),
+        # ("基本上传功能", test_upload_file_zh_basic),
+        ("错误场景", test_upload_file_zh_error_scenarios),
         # ("不同文件类型", test_different_file_types),
         # ("获取上传token", test_get_upload_token_zh),
     ]

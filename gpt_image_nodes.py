@@ -189,7 +189,7 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
                         "default": "The character is sitting cross-legged on the sofa, and the Dalmatian is lying on the blanket sleeping.",
                     },
                 ),
-                "variants": ([1, 2, 3, 4], {"default": 1}),
+                "variants": ([1, 2], {"default": 1}),
                 "size": (
                     ["auto", "1:1", "2:3", "3:2"],
                     {"default": "auto"},
@@ -211,7 +211,7 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
     def execute(self, **kwargs):
         images_in = [
             kwargs.get(f"image_{i}")
-            for i in range(1, 5)
+            for i in range(1, 6)
             if kwargs.get(f"image_{i}") is not None
         ]
 
@@ -265,7 +265,7 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
         variants = kwargs.pop("variants")
         model = "sora-image"
         kwargs.pop("prompt")
-        for i in range(1, 5):
+        for i in range(1, 6):
             kwargs.pop(f"image_{i}", None)
 
         results_pil, result_urls, errors = self._execute_generation(

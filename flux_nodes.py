@@ -365,7 +365,7 @@ class GrsaiFluxKontext_MultiImageToImage(_GrsaiFluxKontextNodeBase):
     def execute(self, **kwargs):
         images_in = [
             kwargs.get(f"image_{i}")
-            for i in range(1, 5)
+            for i in range(1, 4)
             if kwargs.get(f"image_{i}") is not None
         ]
 
@@ -420,7 +420,7 @@ class GrsaiFluxKontext_MultiImageToImage(_GrsaiFluxKontextNodeBase):
         seed = kwargs.pop("seed")
         model = kwargs.pop("model")
         kwargs.pop("prompt")
-        for i in range(1, 5):
+        for i in range(1, 4):
             kwargs.pop(f"image_{i}", None)
 
         results_pil, result_urls, errors = self._execute_generation(
