@@ -21,7 +21,7 @@ def get_upload_token(
         requests.exceptions.RequestException: 请求异常
         ValueError: 响应数据解析异常
     """
-    url = "https://api.grsai.com/client/resource/newUploadToken"
+    url = "https://grsai.dakka.com.cn/client/resource/newUploadToken"
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
@@ -60,7 +60,7 @@ def get_upload_token_zh(
         requests.exceptions.RequestException: 请求异常
         ValueError: 响应数据解析异常
     """
-    url = "https://api.grsai.com/client/resource/newUploadTokenZH"
+    url = "https://grsai.dakka.com.cn/client/resource/newUploadTokenZH"
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 

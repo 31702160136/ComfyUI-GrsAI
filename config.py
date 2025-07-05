@@ -29,7 +29,7 @@ class GrsaiConfig:
 
     # 默认配置
     DEFAULT_CONFIG = {
-        "api_base_url": "https://api.grsai.com",
+        "api_base_url": "https://grsai.dakka.com.cn",
         "model": "flux-kontext-pro",
         "aspect_ratio": "1:1",
         "output_format": "jpeg",
