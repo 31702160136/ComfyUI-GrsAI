@@ -232,6 +232,88 @@ class GrsaiAPI:
                     errors.append(f"图像生成异常")
         return pil_images, image_urls, errors
 
+    def banana_generate_image(
+        self,
+        prompt: str,
+        model: str = "nano-banana",
+        urls: List[str] = [],
+    ) -> Tuple[List["Image.Image"], List[str], List[str]]:
+        """
+        Nano Banana API 调用
+
+        Args:
+            prompt: 编辑或生成描述。
+            model: 使用的模型，默认 "nano-banana"。
+                   可选值："nano-banana"、"nano-banana-fast"。
+            urls: 可选的参考/输入图片 URL 列表（用于编辑场景）。
+
+        Returns:
+            (pil_images, image_urls, errors)
+        """
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "urls": urls,
+            "shutProgress": True,
+            "cdn": "zh",
+        }
+
+        print(json.dumps(payload, indent=4, ensure_ascii=False))
+        print("🍌 开始调用 Nano Banana 接口...")
+
+        try:
+            response = self._make_request("POST", "/v1/draw/nano-banana", data=payload)
+        except Exception as e:
+            if isinstance(e, GrsaiAPIError):
+                raise e
+            raise GrsaiAPIError(format_error_message(e, "Nano Banana 调用"))
+
+        pil_images: List["Image.Image"] = []
+        image_urls: List[str] = []
+        errors: List[str] = []
+
+        # 兼容两种返回结构：单 url 或 results 列表
+        results_urls: List[str] = []
+        if isinstance(response, dict):
+            if isinstance(response.get("results"), list):
+                try:
+                    results_urls = [item["url"] for item in response["results"]]
+                except Exception:
+                    pass
+            if not results_urls and isinstance(response.get("url"), str):
+                results_urls = [response["url"]]
+
+        if not results_urls:
+            raise GrsaiAPIError("Nano Banana API 返回中未找到可用的图片 URL")
+
+        def thread_download_image(image_url: str):
+            try:
+                print("⬇️ 正在下载生成的图像...")
+                timeout = self.config.get_config("timeout", 120)
+                pil_image = download_image(image_url, timeout=timeout)
+                if pil_image is None:
+                    raise GrsaiAPIError("图像下载失败，可能是网络超时或服务异常")
+                print("✅ 图像下载成功")
+                return pil_image, image_url
+            except Exception as e:
+                raise GrsaiAPIError(f"下载或处理图像时出错: {str(e)}")
+
+        with ThreadPoolExecutor(max_workers=len(results_urls)) as executor:
+            futures = {executor.submit(thread_download_image, url): url for url in results_urls}
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    if isinstance(result, tuple) and len(result) == 2:
+                        img, url = result
+                        pil_images.append(img)
+                        image_urls.append(url)
+                    else:
+                        errors.append("未知的下载结果格式")
+                except Exception:
+                    errors.append("图像生成或下载异常")
+
+        return pil_images, image_urls, errors
+
     def flux_generate_image(
         self,
         prompt: str,

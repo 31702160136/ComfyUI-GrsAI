@@ -12,6 +12,10 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Any
 
+# Ensure a dedicated directory for test outputs
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "test_outputs")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 # 添加当前目录到Python路径，以便导入模块
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -37,14 +41,14 @@ def test_generate_single_image_function():
         从 nodes.py 中提取的 generate_single_image 函数
         """
         try:
-            api_client = FluxKontextAPI(api_key=grsai_api_key)
+            api_client = GrsaiAPI(api_key=grsai_api_key)
             api_params = {
                 "prompt": final_prompt,
                 "model": model,
                 "seed": current_seed,
             }
             api_params.update(kwargs)
-            pil_image, url = api_client.generate_image(**api_params)
+            pil_image, url = api_client.flux_generate_image(**api_params)
             return pil_image, url
         except Exception as e:
             return e
@@ -54,7 +58,7 @@ def test_generate_single_image_function():
         {
             "name": "基础文本生图测试",
             "prompt": "A beautiful sunset over the mountains",
-            "model": "flux-kontext-max",
+            "model": "flux-kontext-pro",
             "seed": 12345,
             "aspect_ratio": "1:1",
         },
@@ -139,7 +143,7 @@ def test_generate_single_image_function():
 
                 # 可选：保存图像到本地
                 if pil_image:
-                    save_path = f"test_output_{i}_{current_seed}.png"
+                    save_path = os.path.join(OUTPUT_DIR, f"test_output_{i}_{current_seed}.png")
                     pil_image.save(save_path)
                     print(f"💾 图像已保存到: {save_path}")
 
@@ -167,14 +171,14 @@ def test_error_scenarios():
         grsai_api_key: str, final_prompt: str, current_seed: int, model: str, **kwargs
     ):
         try:
-            api_client = FluxKontextAPI(api_key=grsai_api_key)
+            api_client = GrsaiAPI(api_key=grsai_api_key)
             api_params = {
                 "prompt": final_prompt,
                 "model": model,
                 "seed": current_seed,
             }
             api_params.update(kwargs)
-            pil_image, url = api_client.generate_image(**api_params)
+            pil_image, url = api_client.flux_generate_image(**api_params)
             return pil_image, url
         except Exception as e:
             return e

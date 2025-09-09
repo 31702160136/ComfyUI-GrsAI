@@ -9,6 +9,10 @@ import numpy as np
 from PIL import Image
 from utils import pil_to_tensor, tensor_to_pil
 
+# Ensure a dedicated directory for test outputs
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "test_outputs")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 
 def create_transparent_test_image():
     """创建一个带透明背景的测试图像"""
@@ -38,7 +42,7 @@ def test_transparency_preservation():
     print(f"原始图像尺寸: {test_img.size}")
 
     # 保存原始测试图像
-    test_img.save("original_transparent.png")
+    test_img.save(os.path.join(OUTPUT_DIR, "original_transparent.png"))
     print("保存原始图像: original_transparent.png")
 
     # 测试1: 保留透明度（新功能）
@@ -50,7 +54,7 @@ def test_transparency_preservation():
     if result_rgba:
         result_img = result_rgba[0]
         print(f"结果图像模式: {result_img.mode}")
-        result_img.save("result_transparent_preserved.png")
+        result_img.save(os.path.join(OUTPUT_DIR, "result_transparent_preserved.png"))
         print("保存结果: result_transparent_preserved.png")
 
     # 测试2: 使用旧API（向后兼容）
@@ -62,7 +66,7 @@ def test_transparency_preservation():
     if result_rgb_black:
         result_img_black = result_rgb_black[0]
         print(f"结果图像模式: {result_img_black.mode}")
-        result_img_black.save("result_black_background.png")
+        result_img_black.save(os.path.join(OUTPUT_DIR, "result_black_background.png"))
         print("保存结果: result_black_background.png")
 
     # 测试3: 白色背景
@@ -74,7 +78,7 @@ def test_transparency_preservation():
     if result_rgb_white:
         result_img_white = result_rgb_white[0]
         print(f"结果图像模式: {result_img_white.mode}")
-        result_img_white.save("result_white_background.png")
+        result_img_white.save(os.path.join(OUTPUT_DIR, "result_white_background.png"))
         print("保存结果: result_white_background.png")
 
     print("\n=== 测试完成 ===")

@@ -14,6 +14,15 @@ import json
 # 添加当前目录到Python路径，以便导入模块
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# 尝试加载 .env 中的环境变量
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except Exception:
+    # 未安装 python-dotenv 或加载失败时忽略，按原逻辑读取环境变量
+    pass
+
 try:
     from upload import upload_file_zh, get_upload_token_zh
 except ImportError as e:
@@ -129,7 +138,7 @@ def test_upload_file_zh_error_scenarios():
 
     print(aa)
 
-    return
+    # return
     # 测试1: 空文件路径
     print("\n📝 测试 1: 空文件路径")
     print("-" * 40)
@@ -165,11 +174,11 @@ def test_upload_file_zh_error_scenarios():
     total_tests += 1
 
     # 备份原始API密钥
-    original_api_key = os.getenv("GRSAI_KEY")
+    original_api_key = os.getenv("GRSAI_API_KEY")
 
     try:
         # 设置无效的API密钥
-        os.environ["GRSAI_KEY"] = "invalid_api_key_123"
+        os.environ["GRSAI_API_KEY"] = "invalid_api_key_123"
 
         # 创建临时测试文件
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
@@ -189,10 +198,10 @@ def test_upload_file_zh_error_scenarios():
     finally:
         # 恢复原始API密钥
         if original_api_key:
-            os.environ["GRSAI_KEY"] = original_api_key
+            os.environ["GRSAI_API_KEY"] = original_api_key
         else:
-            if "GRSAI_KEY" in os.environ:
-                del os.environ["GRSAI_KEY"]
+            if "GRSAI_API_KEY" in os.environ:
+                del os.environ["GRSAI_API_KEY"]
 
     print(f"\n错误场景测试完成: {success_count}/{total_tests} 通过")
     return success_count == total_tests
@@ -206,9 +215,9 @@ def test_different_file_types():
     print("测试不同文件类型上传")
     print("=" * 60)
 
-    api_key = os.getenv("GRSAI_KEY")
+    api_key = os.getenv("GRSAI_API_KEY")
     if not api_key:
-        print("❌ 错误: 未找到GRSAI_KEY环境变量，跳过此测试")
+        print("❌ 错误: 未找到GRSAI_API_KEY环境变量，跳过此测试")
         return False
 
     file_types = [
@@ -280,9 +289,9 @@ def test_get_upload_token_zh():
     print("测试获取上传token功能")
     print("=" * 60)
 
-    api_key = os.getenv("GRSAI_KEY")
+    api_key = os.getenv("GRSAI_API_KEY")
     if not api_key:
-        print("❌ 错误: 未找到GRSAI_KEY环境变量，跳过此测试")
+        print("❌ 错误: 未找到GRSAI_API_KEY环境变量，跳过此测试")
         return False
 
     try:
@@ -332,16 +341,16 @@ def main():
     主测试函数
     """
     print("🚀 开始测试 upload_file_zh 相关功能")
-    print("请确保已设置环境变量 GRSAI_KEY")
+    print("请确保已设置环境变量 GRSAI_API_KEY")
 
     all_tests_passed = True
 
     # 运行各项测试
     tests = [
-        # ("基本上传功能", test_upload_file_zh_basic),
+        ("基本上传功能", test_upload_file_zh_basic),
         ("错误场景", test_upload_file_zh_error_scenarios),
-        # ("不同文件类型", test_different_file_types),
-        # ("获取上传token", test_get_upload_token_zh),
+        ("不同文件类型", test_different_file_types),
+        ("获取上传token", test_get_upload_token_zh),
     ]
 
     passed_tests = 0

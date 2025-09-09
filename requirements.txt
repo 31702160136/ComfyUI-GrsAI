@@ -4,3 +4,5 @@ fal-client
 httpx
 httpcore
 Pillow
+numpy
+torch

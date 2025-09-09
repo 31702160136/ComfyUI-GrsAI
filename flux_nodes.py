@@ -255,13 +255,7 @@ class GrsaiFluxKontext_ImageToImage(_GrsaiFluxKontextNodeBase):
                 default_config.api_key_error_message, image
             )
 
-        grsai_key = default_config.get_api_key()
-        if not grsai_key:
-            return self._create_error_result(
-                default_config.api_key_error_message, image
-            )
-
-        os.environ["GRSAI_KEY"] = grsai_key
+        os.environ["GRSAI_API_KEY"] = grsai_api_key
         temp_file_path = None
         uploaded_url = ""
         try:
@@ -378,7 +372,7 @@ class GrsaiFluxKontext_MultiImageToImage(_GrsaiFluxKontextNodeBase):
         if not grsai_api_key:
             return self._create_error_result(default_config.api_key_error_message)
 
-        os.environ["GRSAI_KEY"] = grsai_api_key
+        os.environ["GRSAI_API_KEY"] = grsai_api_key
 
         uploaded_urls = []
         temp_files = []
