@@ -72,7 +72,7 @@ class GrsaiNanoBanana_Node:
                 ),
                 "model": (
                     ["nano-banana", "nano-banana-fast"],
-                    {"default": "nano-banana"},
+                    {"default": "nano-banana-fast"},
                 ),
             },
             "optional": {
@@ -142,7 +142,9 @@ class GrsaiNanoBanana_Node:
 
                     with SuppressFalLogs():
                         uploaded_urls.append(
-                            upload_file_zh(api_key=grsai_api_key, file_path=temp_files[-1])
+                            upload_file_zh(
+                                api_key=grsai_api_key, file_path=temp_files[-1]
+                            )
                         )
 
                 if not uploaded_urls:
@@ -172,14 +174,14 @@ class GrsaiNanoBanana_Node:
 
         if not pil_images:
             error_msg = (
-                "All image generations failed." if not images_in else "Image editing failed."
+                "All image generations failed."
+                if not images_in
+                else "Image editing failed."
             )
             detail = f"; {errors}" if errors else ""
             return self._create_error_result(error_msg + detail)
 
-        status = (
-            f"Nano Banana | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
-        )
+        status = f"Nano Banana | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
 
         return {
             "ui": {"string": [status]},
@@ -194,4 +196,3 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Grsai_NanoBanana": "🍌 GrsAI Nano Banana - Text/Image",
 }
-
