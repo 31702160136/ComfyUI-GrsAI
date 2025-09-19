@@ -12,6 +12,10 @@ import random
 # 添加当前目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Ensure a dedicated directory for test outputs
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "test_outputs")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 
 def quick_test():
     """快速测试函数"""
@@ -36,14 +40,14 @@ def quick_test():
     # 定义内部函数（从 nodes.py 提取）
     def generate_single_image(current_seed):
         try:
-            api_client = FluxKontextAPI(api_key=api_key)
+            api_client = GrsaiAPI(api_key=api_key)
             api_params = {
                 "prompt": "A beautiful landscape with mountains and a lake",
-                "model": "flux-kontext-max",
+                "model": "flux-kontext-pro",
                 "seed": current_seed,
                 "aspect_ratio": "1:1",
             }
-            pil_image, url = api_client.generate_image(**api_params)
+            pil_image, url = api_client.flux_generate_image(**api_params)
             return pil_image, url
         except Exception as e:
             return e
@@ -69,7 +73,7 @@ def quick_test():
         print(f"⏱️  耗时: {duration:.2f}秒")
 
         # 保存测试图像
-        save_path = f"quick_test_{test_seed}.png"
+        save_path = os.path.join(OUTPUT_DIR, f"quick_test_{test_seed}.png")
         pil_image.save(save_path)
         print(f"💾 图像已保存: {save_path}")
         return True

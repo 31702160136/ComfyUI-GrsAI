@@ -224,7 +224,7 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
         if not grsai_api_key:
             return self._create_error_result(default_config.api_key_error_message)
 
-        os.environ["GRSAI_KEY"] = grsai_api_key
+        os.environ["GRSAI_API_KEY"] = grsai_api_key
 
         uploaded_urls = []
         temp_files = []

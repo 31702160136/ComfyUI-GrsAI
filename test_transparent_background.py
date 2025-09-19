@@ -8,6 +8,10 @@ import numpy as np
 from PIL import Image
 from utils import pil_to_tensor, handle_transparent_background, tensor_to_pil
 
+# Ensure a dedicated directory for test outputs
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "test_outputs")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 
 def create_test_transparent_image():
     """创建一个测试用的透明背景图片"""
@@ -53,8 +57,9 @@ def test_transparent_handling():
         print(f"转换回PIL图片数量: {len(result_imgs)}")
 
         # 保存测试结果
-        output_path = (
-            f"test_transparent_bg_{bg_color[0]}_{bg_color[1]}_{bg_color[2]}.png"
+        output_path = os.path.join(
+            OUTPUT_DIR,
+            f"test_transparent_bg_{bg_color[0]}_{bg_color[1]}_{bg_color[2]}.png",
         )
         processed_img.save(output_path)
         print(f"保存测试图片: {output_path}")
@@ -68,17 +73,17 @@ def test_old_vs_new_behavior():
 
     # 模拟旧版本行为（直接convert RGB）
     old_behavior = test_img.convert("RGB")
-    old_behavior.save("test_old_behavior.png")
+    old_behavior.save(os.path.join(OUTPUT_DIR, "test_old_behavior.png"))
     print("旧版本行为 - 直接convert('RGB'): 保存为 test_old_behavior.png")
 
     # 新版本行为（黑色背景）
     new_behavior_black = handle_transparent_background(test_img, (0, 0, 0))
-    new_behavior_black.save("test_new_behavior_black.png")
+    new_behavior_black.save(os.path.join(OUTPUT_DIR, "test_new_behavior_black.png"))
     print("新版本行为 - 黑色背景: 保存为 test_new_behavior_black.png")
 
     # 新版本行为（白色背景）
     new_behavior_white = handle_transparent_background(test_img, (255, 255, 255))
-    new_behavior_white.save("test_new_behavior_white.png")
+    new_behavior_white.save(os.path.join(OUTPUT_DIR, "test_new_behavior_white.png"))
     print("新版本行为 - 白色背景: 保存为 test_new_behavior_white.png")
 
 

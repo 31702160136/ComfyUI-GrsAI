@@ -93,6 +93,56 @@ def test_gpt_nodes():
         print(f"❌ 测试GPT节点失败: {e}")
 
 
+def test_banana_nodes():
+    try:
+        from nano_banana_nodes import (
+            NODE_CLASS_MAPPINGS,
+            NODE_DISPLAY_NAME_MAPPINGS,
+        )
+
+        print("\n=== 测试 Nano Banana 节点 ===")
+        print(f"找到 {len(NODE_CLASS_MAPPINGS)} 个Banana节点类")
+
+        for node_name, node_class in NODE_CLASS_MAPPINGS.items():
+            print(f"\n测试节点: {node_name}")
+            print(f"  类名: {node_class.__name__}")
+            print(f"  显示名: {NODE_DISPLAY_NAME_MAPPINGS.get(node_name, 'N/A')}")
+
+            # 基本能力检查
+            try:
+                instance = node_class()
+                print("  ✅ 可以实例化")
+                if hasattr(node_class, "INPUT_TYPES"):
+                    input_types = node_class.INPUT_TYPES()
+                    print("  ✅ 有 INPUT_TYPES 并可调用")
+                    if isinstance(input_types, dict):
+                        req = len(input_types.get("required", {}))
+                        opt = len(input_types.get("optional", {}))
+                        print(f"    required: {req}, optional: {opt}")
+                else:
+                    print("  ❌ 缺少 INPUT_TYPES")
+
+                # 类属性
+                for attr in ["RETURN_TYPES", "RETURN_NAMES", "FUNCTION", "CATEGORY"]:
+                    if hasattr(node_class, attr):
+                        print(f"  ✅ 有 {attr}: {getattr(node_class, attr)}")
+                    else:
+                        print(f"  ❌ 缺少 {attr}")
+
+                # execute 存在性
+                if hasattr(instance, "execute"):
+                    print("  ✅ 有 execute 方法")
+                else:
+                    print("  ❌ 缺少 execute 方法")
+
+            except Exception as e:
+                print(f"  ❌ 基本检查失败: {e}")
+
+    except Exception as e:
+        print(f"❌ 测试Banana节点失败: {e}")
+
+
 if __name__ == "__main__":
     test_flux_nodes()
     test_gpt_nodes()
+    test_banana_nodes()

@@ -40,7 +40,7 @@ class GrsaiConfig:
     }
 
     # 支持的宽高比
-    SUPPORTED_ASPECT_RATIOS = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"]
+    SUPPORTED_ASPECT_RATIOS = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16", "9:21"]
 
     # 支持的输出格式
     SUPPORTED_OUTPUT_FORMATS = ["jpeg", "png"]
