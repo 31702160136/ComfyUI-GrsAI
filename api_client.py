@@ -237,6 +237,7 @@ class GrsaiAPI:
         prompt: str,
         model: str = "nano-banana",
         urls: List[str] = [],
+        aspect_ratio: Optional[str] = None,
     ) -> Tuple[List["Image.Image"], List[str], List[str]]:
         """
         Nano Banana API 调用
@@ -257,6 +258,13 @@ class GrsaiAPI:
             "shutProgress": True,
             "cdn": "zh",
         }
+
+        if aspect_ratio:
+            if not default_config.validate_nano_banana_aspect_ratio(aspect_ratio):
+                raise GrsaiAPIError(
+                    f"不支持的宽高比: {aspect_ratio}. 支持的选项: {', '.join(default_config.SUPPORTED_NANO_BANANA_AR)}"
+                )
+            payload["aspectRatio"] = aspect_ratio
 
         print(json.dumps(payload, indent=4, ensure_ascii=False))
         print("🍌 开始调用 Nano Banana 接口...")

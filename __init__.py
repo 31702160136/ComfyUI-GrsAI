@@ -37,7 +37,7 @@ __all__ = [
 ]
 
 # 版本信息 - 必须与 pyproject.toml 中的版本保持完全一致
-__version__ = "1.0.3"
+__version__ = "1.0.5"
 
 # 插件作者信息
 __author__ = "ComfyUI-GrsAI Team"

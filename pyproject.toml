@@ -1,7 +1,7 @@
 [project]
 name = "ComfyUI-GrsAI"
 description = "GrsAI API node supports models: Flux-Pro-1.1 (¥ 0.03), Flux-Ultra-1.1 (¥ 0.04), Flux Kontext Pro (¥ 0.035), Flux Kontext Max (¥ 0.07), GPT Image (¥ 0.02), Nano Banana (¥ 0.022). Support text generated images, image generated images, and multi image fusion."
-version = "1.0.4"
+version = "1.0.5"
 license = { file = "LICENSE" }
 dependencies = [
     "requests",
