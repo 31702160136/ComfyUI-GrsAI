@@ -76,6 +76,11 @@ class GrsaiNanoBanana_Node:
                 ),
             },
             "optional": {
+                "use_aspect_ratio": ("BOOLEAN", {"default": False}),
+                "aspect_ratio": (
+                    default_config.SUPPORTED_NANO_BANANA_AR,
+                    {"default": "auto"},
+                ),
                 "image_1": ("IMAGE",),
                 "image_2": ("IMAGE",),
                 "image_3": ("IMAGE",),
@@ -113,6 +118,12 @@ class GrsaiNanoBanana_Node:
 
         prompt = kwargs.pop("prompt")
         model = kwargs.pop("model")
+        use_aspect_ratio = kwargs.pop("use_aspect_ratio", False)
+        aspect_ratio = kwargs.pop("aspect_ratio", None)
+        if not use_aspect_ratio:
+            aspect_ratio = None
+        elif aspect_ratio is None:
+            aspect_ratio = "auto"
 
         # 收集可选输入图像
         images_in: List[torch.Tensor] = [
@@ -165,7 +176,10 @@ class GrsaiNanoBanana_Node:
             api_client = GrsaiAPI(api_key=grsai_api_key)
             with SuppressFalLogs():
                 pil_images, image_urls, errors = api_client.banana_generate_image(
-                    prompt=prompt, model=model, urls=uploaded_urls
+                    prompt=prompt,
+                    model=model,
+                    urls=uploaded_urls,
+                    aspect_ratio=aspect_ratio,
                 )
         except Exception as e:
             return self._create_error_result(

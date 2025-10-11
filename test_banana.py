@@ -29,8 +29,12 @@ OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "test_outputs")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-def _align8(x: int) -> int:
-    return max(8, int(round(x / 8)) * 8)
+def _align32_floor(x: int) -> int:
+    """向下取整到最接近的32倍，并保证至少为32"""
+    if x <= 0:
+        return 32
+    aligned = (x // 32) * 32
+    return aligned if aligned >= 32 else 32
 
 
 def _parse_ratio(ratio: str) -> Tuple[int, int]:
@@ -39,16 +43,17 @@ def _parse_ratio(ratio: str) -> Tuple[int, int]:
 
 
 def _compute_dims_1mp(ratio: str) -> Tuple[int, int]:
-    # 目标约 1MP（以 1024x1024 为参考），并对齐到 8
+    # 目标约 1MP（以 1024x1024 为参考），再向下对齐到 32 像素网格
     target_area = 1024 * 1024
     w_r, h_r = _parse_ratio(ratio)
     w_f = math.sqrt(target_area * (w_r / h_r))
     h_f = target_area / w_f
-    w_i = _align8(int(round(w_f)))
-    h_i = _align8(int(round(h_f)))
-    # 安全范围
-    w_i = max(64, min(w_i, 2048))
-    h_i = max(64, min(h_i, 2048))
+    w_i = _align32_floor(int(round(w_f)))
+    h_i = _align32_floor(int(round(h_f)))
+
+    # API 返回的最大边约 1536，且最小不低于 64
+    w_i = max(64, min(w_i, 1536))
+    h_i = max(64, min(h_i, 1536))
     return w_i, h_i
 
 
@@ -57,7 +62,7 @@ def _build_dummy_url(width: int, height: int) -> str:
     return f"https://dummyimage.com/{width}x{height}/{bg}/{bg}.png"
 
 
-def run_case(model: str, prompt: str) -> bool:
+def run_case(model: str, prompt: str, aspect_ratio: str = "auto") -> bool:
     api_key = default_config.get_api_key()
     if not api_key:
         print(default_config.api_key_error_message)
@@ -67,8 +72,9 @@ def run_case(model: str, prompt: str) -> bool:
     try:
         client = GrsaiAPI(api_key=api_key)
         start = time.time()
+        print(f"📐 宽高比: {aspect_ratio}")
         pil_images, image_urls, errors = client.banana_generate_image(
-            prompt=prompt, model=model, urls=[]
+            prompt=prompt, model=model, urls=[], aspect_ratio=aspect_ratio
         )
         duration = time.time() - start
 
@@ -102,31 +108,43 @@ def run_case(model: str, prompt: str) -> bool:
 
 
 def run_ar_placeholder_case(prompt: str) -> bool:
-    """单独的用例：为所有支持的宽高比生成占位 URL 并调用生成接口"""
-    print("\n🚀 测试各宽高比（占位URL）")
+    """单独的用例：遍历全部支持的宽高比并调用生成接口"""
+    print("\n🚀 测试各宽高比（API 参数）")
     ar_list = getattr(
         default_config,
-        "SUPPORTED_ASPECT_RATIOS",
-        ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16", "9:21"],
+        "SUPPORTED_NANO_BANANA_AR",
+        [
+            "auto",
+            "1:1",
+            "16:9",
+            "9:16",
+            "4:3",
+            "3:4",
+            "3:2",
+            "2:3",
+            "5:4",
+            "4:5",
+            "21:9",
+        ],
     )
     ar_passed = 0
     for ar in ar_list:
         try:
-            w, h = _compute_dims_1mp(ar)
-            dummy_url = _build_dummy_url(w, h)
-            print(f"\n[AR {ar}] 使用占位URL: {dummy_url}")
-
-            ar_prompt = (
-                prompt
-                + "\nAdopt the aspect ratio of the last reference image; do not use its visual content."
-            )
+            if ":" in ar:
+                w, h = _compute_dims_1mp(ar)
+                print(f"\n[AR {ar}] 目标尺寸约: {w}x{h}")
+            else:
+                print(f"\n[AR {ar}] 使用自动宽高比")
 
             ok = False
             try:
                 client = GrsaiAPI(api_key=default_config.get_api_key())
                 start = time.time()
                 pil_images, image_urls, errors = client.banana_generate_image(
-                    prompt=ar_prompt, model="nano-banana-fast", urls=[dummy_url]
+                    prompt,
+                    model="nano-banana-fast",
+                    urls=[],
+                    aspect_ratio=ar,
                 )
                 duration = time.time() - start
                 if errors:
@@ -171,7 +189,7 @@ def main() -> int:
     if mode in ("basic", "all"):
         cases = [
             # ("nano-banana", prompt),
-            # ("nano-banana-fast", prompt),
+            ("nano-banana-fast", prompt),
         ]
         passed = 0
         for model, p in cases:

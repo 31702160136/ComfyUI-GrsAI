@@ -39,8 +39,23 @@ class GrsaiConfig:
         "max_retries": 3,
     }
 
-    # 支持的宽高比
+    # Flux 节点使用的宽高比选项
     SUPPORTED_ASPECT_RATIOS = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16", "9:21"]
+
+    # Nano Banana API 支持的宽高比选项
+    SUPPORTED_NANO_BANANA_AR = [
+        "auto",
+        "1:1",
+        "16:9",
+        "9:16",
+        "4:3",
+        "3:4",
+        "3:2",
+        "2:3",
+        "5:4",
+        "4:5",
+        "21:9",
+    ]
 
     # 支持的输出格式
     SUPPORTED_OUTPUT_FORMATS = ["jpeg", "png"]
@@ -100,6 +115,10 @@ class GrsaiConfig:
     def validate_aspect_ratio(self, aspect_ratio: str) -> bool:
         """验证宽高比是否支持"""
         return aspect_ratio in self.SUPPORTED_ASPECT_RATIOS
+
+    def validate_nano_banana_aspect_ratio(self, aspect_ratio: str) -> bool:
+        """验证 Nano Banana 宽高比是否支持"""
+        return aspect_ratio in self.SUPPORTED_NANO_BANANA_AR
 
     def validate_output_format(self, output_format: str) -> bool:
         """验证输出格式是否支持"""
