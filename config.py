@@ -57,6 +57,9 @@ class GrsaiConfig:
         "21:9",
     ]
 
+    # Nano Banana PRO 支持的输出尺寸
+    SUPPORTED_NANO_BANANA_SIZES = ["1K", "2K", "4K"]
+
     # 支持的输出格式
     SUPPORTED_OUTPUT_FORMATS = ["jpeg", "png"]
 
@@ -119,6 +122,10 @@ class GrsaiConfig:
     def validate_nano_banana_aspect_ratio(self, aspect_ratio: str) -> bool:
         """验证 Nano Banana 宽高比是否支持"""
         return aspect_ratio in self.SUPPORTED_NANO_BANANA_AR
+
+    def validate_nano_banana_image_size(self, image_size: str) -> bool:
+        """验证 Nano Banana PRO 输出尺寸是否支持"""
+        return image_size in self.SUPPORTED_NANO_BANANA_SIZES
 
     def validate_output_format(self, output_format: str) -> bool:
         """验证输出格式是否支持"""

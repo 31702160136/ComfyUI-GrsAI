@@ -71,7 +71,7 @@ class GrsaiNanoBanana_Node:
                     },
                 ),
                 "model": (
-                    ["nano-banana", "nano-banana-fast"],
+                    ["nano-banana", "nano-banana-fast", "nano-banana-pro"],
                     {"default": "nano-banana-fast"},
                 ),
             },
@@ -80,6 +80,10 @@ class GrsaiNanoBanana_Node:
                 "aspect_ratio": (
                     default_config.SUPPORTED_NANO_BANANA_AR,
                     {"default": "auto"},
+                ),
+                "image_size": (
+                    default_config.SUPPORTED_NANO_BANANA_SIZES,
+                    {"default": "1K"},
                 ),
                 "image_1": ("IMAGE",),
                 "image_2": ("IMAGE",),
@@ -120,10 +124,17 @@ class GrsaiNanoBanana_Node:
         model = kwargs.pop("model")
         use_aspect_ratio = kwargs.pop("use_aspect_ratio", False)
         aspect_ratio = kwargs.pop("aspect_ratio", None)
+        image_size = kwargs.pop("image_size", "1K")
         if not use_aspect_ratio:
             aspect_ratio = None
         elif aspect_ratio is None:
             aspect_ratio = "auto"
+        if model != "nano-banana-pro":
+            image_size = None
+        elif image_size and not default_config.validate_nano_banana_image_size(image_size):
+            return self._create_error_result(
+                f"不支持的 imageSize: {image_size}. 支持的选项: {', '.join(default_config.SUPPORTED_NANO_BANANA_SIZES)}"
+            )
 
         # 收集可选输入图像
         images_in: List[torch.Tensor] = [
@@ -180,6 +191,7 @@ class GrsaiNanoBanana_Node:
                     model=model,
                     urls=uploaded_urls,
                     aspect_ratio=aspect_ratio,
+                    image_size=image_size,
                 )
         except Exception as e:
             return self._create_error_result(
@@ -195,7 +207,10 @@ class GrsaiNanoBanana_Node:
             detail = f"; {errors}" if errors else ""
             return self._create_error_result(error_msg + detail)
 
-        status = f"Nano Banana | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
+        size_note = f" | imageSize: {image_size}" if image_size else ""
+        status = (
+            f"Nano Banana | 模型: {model}{size_note} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
+        )
 
         return {
             "ui": {"string": [status]},
