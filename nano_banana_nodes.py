@@ -125,14 +125,11 @@ class GrsaiNanoBanana_Node:
         use_aspect_ratio = kwargs.pop("use_aspect_ratio", False)
         aspect_ratio = kwargs.pop("aspect_ratio", None)
         image_size = kwargs.pop("image_size", "1K")
-        ignored_image_size = False
         if not use_aspect_ratio:
             aspect_ratio = None
         elif aspect_ratio is None:
             aspect_ratio = "auto"
         if model != "nano-banana-pro":
-            # 非 PRO 模型不支持 imageSize，若用户手动选择了其他值则提醒
-            ignored_image_size = image_size not in (None, "1K")
             image_size = None
         elif image_size and not default_config.validate_nano_banana_image_size(image_size):
             return self._create_error_result(
@@ -211,9 +208,8 @@ class GrsaiNanoBanana_Node:
             return self._create_error_result(error_msg + detail)
 
         size_note = f" | imageSize: {image_size}" if image_size else ""
-        ignored_note = " | imageSize 仅 nano-banana-pro 支持，已忽略" if ignored_image_size else ""
         status = (
-            f"Nano Banana | 模型: {model}{size_note}{ignored_note} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
+            f"Nano Banana | 模型: {model}{size_note} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
         )
 
         return {
