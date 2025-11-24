@@ -57,7 +57,7 @@ ComfyUI-GrsAI 是一个专业的 ComfyUI 扩展，提供完整的多模型图像
 - **可选参数**:
   - 通过 `使用宽高比` 勾选框决定是否传入 `aspectRatio`
   - 宽高比列表支持 `auto`、`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`3:2`、`2:3`、`5:4`、`4:5`、`21:9`
-  - 仅 `nano-banana-pro` 支持 `imageSize`（1K/2K/4K，默认 1K）
+  - 仅 `nano-banana-pro` 支持 `imageSize`（1K/2K/4K，默认 1K），在其他模型上会被忽略以避免误用
 
 使用步骤（ComfyUI 内）：
 
