@@ -57,7 +57,18 @@ class GrsaiConfig:
         "21:9",
     ]
 
-    # Nano Banana PRO 支持的输出尺寸
+    # Nano Banana 模型列表
+    SUPPORTED_NANO_BANANA_MODELS = [
+        "nano-banana-fast",
+        "nano-banana",
+        "nano-banana-pro",
+        "nano-banana-pro-vt",
+    ]
+
+    # 支持 imageSize 参数的 Nano Banana 模型
+    NANO_BANANA_MODELS_SUPPORTING_IMAGE_SIZE = ["nano-banana-pro", "nano-banana-pro-vt"]
+
+    # Nano Banana PRO / PRO-VT 支持的输出尺寸
     SUPPORTED_NANO_BANANA_SIZES = ["1K", "2K", "4K"]
 
     # 支持的输出格式
@@ -124,8 +135,12 @@ class GrsaiConfig:
         return aspect_ratio in self.SUPPORTED_NANO_BANANA_AR
 
     def validate_nano_banana_image_size(self, image_size: str) -> bool:
-        """验证 Nano Banana PRO 输出尺寸是否支持"""
+        """验证 Nano Banana（PRO/PRO-VT）输出尺寸是否支持"""
         return image_size in self.SUPPORTED_NANO_BANANA_SIZES
+
+    def nano_banana_model_supports_image_size(self, model: str) -> bool:
+        """判断 Nano Banana 模型是否支持 imageSize 参数"""
+        return model in self.NANO_BANANA_MODELS_SUPPORTING_IMAGE_SIZE
 
     def validate_output_format(self, output_format: str) -> bool:
         """验证输出格式是否支持"""

@@ -71,7 +71,7 @@ class GrsaiNanoBanana_Node:
                     },
                 ),
                 "model": (
-                    ["nano-banana", "nano-banana-fast", "nano-banana-pro"],
+                    default_config.SUPPORTED_NANO_BANANA_MODELS,
                     {"default": "nano-banana-fast"},
                 ),
             },
@@ -129,7 +129,7 @@ class GrsaiNanoBanana_Node:
             aspect_ratio = None
         elif aspect_ratio is None:
             aspect_ratio = "auto"
-        if model != "nano-banana-pro":
+        if not default_config.nano_banana_model_supports_image_size(model):
             image_size = None
         elif image_size and not default_config.validate_nano_banana_image_size(image_size):
             return self._create_error_result(

@@ -4,6 +4,7 @@ Nano Banana API 简单测试
 - 测试默认模型: nano-banana
 - 测试加速模型: nano-banana-fast
 - 测试专业模型: nano-banana-pro（支持 imageSize）
+- 测试专业模型: nano-banana-pro-vt（支持 imageSize）
 
 运行: python test_banana.py
 """
@@ -176,7 +177,9 @@ def run_ar_placeholder_case(prompt: str) -> bool:
 
 
 def run_invalid_image_size_case(prompt: str) -> bool:
-    """验证 imageSize 仅在 nano-banana-pro 生效的校验逻辑"""
+    """验证 imageSize 行为（本地校验）：
+    - PRO / PRO-VT：非法 imageSize 会在本地校验阶段拦截
+    """
     api_key = default_config.get_api_key()
     if not api_key:
         print(default_config.api_key_error_message)
@@ -185,17 +188,17 @@ def run_invalid_image_size_case(prompt: str) -> bool:
     print("\n🧪 校验 imageSize 约束")
     client = GrsaiAPI(api_key=api_key)
 
-    # 非 PRO 模型携带 imageSize 应直接抛出本地校验错误
-    try:
-        client.banana_generate_image(prompt=prompt, model="nano-banana", image_size="1K")
-        print("❌ 预期失败的调用却成功了（非 PRO 模型不应支持 imageSize）")
-        return False
-    except GrsaiAPIError as e:
-        print(f"✅ 非 PRO 模型携带 imageSize 拒绝成功: {e}")
-
     # PRO 模型非法尺寸应抛错
     try:
         client.banana_generate_image(prompt=prompt, model="nano-banana-pro", image_size="8K")
+        print("❌ 预期失败的调用却成功了（非法 imageSize 未被拦截）")
+        return False
+    except GrsaiAPIError as e:
+        print(f"✅ 非法 imageSize 拒绝成功: {e}")
+
+    # PRO-VT 模型非法尺寸应抛错
+    try:
+        client.banana_generate_image(prompt=prompt, model="nano-banana-pro-vt", image_size="8K")
         print("❌ 预期失败的调用却成功了（非法 imageSize 未被拦截）")
         return False
     except GrsaiAPIError as e:
@@ -221,10 +224,11 @@ def main() -> int:
             # ("nano-banana", prompt),
             ("nano-banana-fast", prompt),
             ("nano-banana-pro", prompt),
+            ("nano-banana-pro-vt", prompt),
         ]
         passed = 0
         for model, p in cases:
-            image_size = "1K" if model == "nano-banana-pro" else None
+            image_size = "1K" if model in ("nano-banana-pro", "nano-banana-pro-vt") else None
             if run_case(model, p, image_size=image_size):
                 passed += 1
         total = len(cases)

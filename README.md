@@ -49,7 +49,7 @@ ComfyUI-GrsAI 是一个专业的 ComfyUI 扩展，提供完整的多模型图像
 全新支持 Nano Banana 图像生成模型，提供高效的文生图与图生图能力：
 
 - **节点名称**: `🍌 GrsAI Nano Banana - Text/Image`
-- **模型选项**: `nano-banana`、`nano-banana-fast`、`nano-banana-pro`
+- **模型选项**: `nano-banana-fast`、`nano-banana`、`nano-banana-pro`、`nano-banana-pro-vt`
 - **输入方式**:
   - 仅填写 `prompt` 为文生图
   - 连接 1–6 张参考图像端口为图生图/多图融合
@@ -57,7 +57,7 @@ ComfyUI-GrsAI 是一个专业的 ComfyUI 扩展，提供完整的多模型图像
 - **可选参数**:
   - 通过 `使用宽高比` 勾选框决定是否传入 `aspectRatio`
   - 宽高比列表支持 `auto`、`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`3:2`、`2:3`、`5:4`、`4:5`、`21:9`
-  - 仅 `nano-banana-pro` 支持 `imageSize`（1K/2K/4K，默认 1K），在其他模型上会被忽略
+  - 仅 `nano-banana-pro` / `nano-banana-pro-vt` 支持 `imageSize`（1K/2K/4K，默认 1K），在其他模型上会被忽略
 
 使用步骤（ComfyUI 内）：
 
@@ -73,7 +73,7 @@ ComfyUI-GrsAI 是一个专业的 ComfyUI 扩展，提供完整的多模型图像
 - **📱 友好的反馈** - 中文界面，emoji状态提示，清晰的成功/失败统计
 - **🚀 高性能** - 智能并发生成，多图同时处理，大幅提升生成速度
 - **🛡️ 稳定可靠** - 完善的错误处理，自动重试机制，确保生成成功率
-- **💰 价格实惠** - 多种模型选择（含 nano-banana-pro），价格低至￥0.02/次
+- **💰 价格实惠** - 多种模型选择（含 nano-banana-pro / nano-banana-pro-vt），价格低至￥0.02/次
 
 ---
 
@@ -88,7 +88,7 @@ ComfyUI-GrsAI 是一个专业的 ComfyUI 扩展，提供完整的多模型图像
 | **Flux Pro 1.1 Ultra** | ￥0.04 | $0.0054 | 超高质量 |
 | **Flux Kontext Pro** | ￥0.035 | $0.0047 | 上下文理解强 |
 | **Flux Kontext Max** | ￥0.07 | $0.0095 | 上下文理解强，支持中文理解 |
-| **Nano Banana Pro** | 参考官网 | - | 支持 `imageSize`（1K/2K/4K） |
+| **Nano Banana Pro / Pro VT** | 参考官网 | - | 支持 `imageSize`（1K/2K/4K） |
 
 *注：价格可能根据官网实时调整，以GrsAI官网为准*
 
@@ -279,9 +279,9 @@ GRSAI_API_KEY=your_grsai_api_key_here
 
 ## 🔮 更新日志
 
-### v1.0.6
+### v1.0.7
 
-- 🌟 新增 `nano-banana-pro` 模型支持，专属参数 `imageSize`（1K/2K/4K，默认 1K），非 PRO 模型自动忽略
+- 🌟 新增 `nano-banana-pro-vt` 模型支持（与 `nano-banana-pro` 相同能力）
 
 ### v1.0.5
 
