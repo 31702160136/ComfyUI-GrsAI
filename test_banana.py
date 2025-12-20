@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
 Nano Banana API 简单测试
- - 测试默认模型: nano-banana
- - 测试加速模型: nano-banana-fast
+- 测试默认模型: nano-banana
+- 测试加速模型: nano-banana-fast
+- 测试专业模型: nano-banana-pro（支持 imageSize）
+- 测试专业模型: nano-banana-pro-vt（支持 imageSize）
 
 运行: python test_banana.py
 """
@@ -62,7 +64,7 @@ def _build_dummy_url(width: int, height: int) -> str:
     return f"https://dummyimage.com/{width}x{height}/{bg}/{bg}.png"
 
 
-def run_case(model: str, prompt: str, aspect_ratio: str = "auto") -> bool:
+def run_case(model: str, prompt: str, aspect_ratio: str = "auto", image_size: str = None) -> bool:
     api_key = default_config.get_api_key()
     if not api_key:
         print(default_config.api_key_error_message)
@@ -74,7 +76,7 @@ def run_case(model: str, prompt: str, aspect_ratio: str = "auto") -> bool:
         start = time.time()
         print(f"📐 宽高比: {aspect_ratio}")
         pil_images, image_urls, errors = client.banana_generate_image(
-            prompt=prompt, model=model, urls=[], aspect_ratio=aspect_ratio
+            prompt=prompt, model=model, urls=[], aspect_ratio=aspect_ratio, image_size=image_size
         )
         duration = time.time() - start
 
@@ -174,6 +176,37 @@ def run_ar_placeholder_case(prompt: str) -> bool:
     return ar_passed == len(ar_list)
 
 
+def run_invalid_image_size_case(prompt: str) -> bool:
+    """验证 imageSize 行为（本地校验）：
+    - PRO / PRO-VT：非法 imageSize 会在本地校验阶段拦截
+    """
+    api_key = default_config.get_api_key()
+    if not api_key:
+        print(default_config.api_key_error_message)
+        return False
+
+    print("\n🧪 校验 imageSize 约束")
+    client = GrsaiAPI(api_key=api_key)
+
+    # PRO 模型非法尺寸应抛错
+    try:
+        client.banana_generate_image(prompt=prompt, model="nano-banana-pro", image_size="8K")
+        print("❌ 预期失败的调用却成功了（非法 imageSize 未被拦截）")
+        return False
+    except GrsaiAPIError as e:
+        print(f"✅ 非法 imageSize 拒绝成功: {e}")
+
+    # PRO-VT 模型非法尺寸应抛错
+    try:
+        client.banana_generate_image(prompt=prompt, model="nano-banana-pro-vt", image_size="8K")
+        print("❌ 预期失败的调用却成功了（非法 imageSize 未被拦截）")
+        return False
+    except GrsaiAPIError as e:
+        print(f"✅ 非法 imageSize 拒绝成功: {e}")
+
+    return True
+
+
 def main() -> int:
     print("🚀 开始测试 Nano Banana API")
     prompt = (
@@ -190,15 +223,21 @@ def main() -> int:
         cases = [
             # ("nano-banana", prompt),
             ("nano-banana-fast", prompt),
+            ("nano-banana-pro", prompt),
+            ("nano-banana-pro-vt", prompt),
         ]
         passed = 0
         for model, p in cases:
-            if run_case(model, p):
+            image_size = "1K" if model in ("nano-banana-pro", "nano-banana-pro-vt") else None
+            if run_case(model, p, image_size=image_size):
                 passed += 1
         total = len(cases)
         print("\n=== 基础用例总结 ===")
         print(f"通过: {passed}/{total}")
         basic_ok = (passed == total)
+
+        # 本地校验 imageSize 合法性
+        basic_ok = basic_ok and run_invalid_image_size_case(prompt)
 
     # 宽高比占位URL用例（单独case）
     ar_ok = True

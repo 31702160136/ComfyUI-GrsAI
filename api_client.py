@@ -235,18 +235,20 @@ class GrsaiAPI:
     def banana_generate_image(
         self,
         prompt: str,
-        model: str = "nano-banana",
+        model: str = "nano-banana-fast",
         urls: List[str] = [],
         aspect_ratio: Optional[str] = None,
+        image_size: Optional[str] = None,
     ) -> Tuple[List["Image.Image"], List[str], List[str]]:
         """
         Nano Banana API 调用
 
         Args:
             prompt: 编辑或生成描述。
-            model: 使用的模型，默认 "nano-banana"。
-                   可选值："nano-banana"、"nano-banana-fast"。
+            model: 使用的模型，默认 "nano-banana-fast"。
+                   可选值："nano-banana-fast"、"nano-banana"、"nano-banana-pro"、"nano-banana-pro-vt"。
             urls: 可选的参考/输入图片 URL 列表（用于编辑场景）。
+            image_size: 仅 nano-banana-pro / nano-banana-pro-vt 支持的输出尺寸，可选 "1K" | "2K" | "4K"。
 
         Returns:
             (pil_images, image_urls, errors)
@@ -258,6 +260,15 @@ class GrsaiAPI:
             "shutProgress": True,
             "cdn": "zh",
         }
+
+        if image_size:
+            # ComfyUI 侧无法基于模型动态隐藏 imageSize 参数，因此在非支持模型上直接忽略该参数
+            if default_config.nano_banana_model_supports_image_size(model):
+                if not default_config.validate_nano_banana_image_size(image_size):
+                    raise GrsaiAPIError(
+                        f"不支持的 imageSize: {image_size}. 支持的选项: {', '.join(default_config.SUPPORTED_NANO_BANANA_SIZES)}"
+                    )
+                payload["imageSize"] = image_size
 
         if aspect_ratio:
             if not default_config.validate_nano_banana_aspect_ratio(aspect_ratio):
