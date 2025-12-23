@@ -151,6 +151,12 @@ class GrsaiAPI:
         urls: List[str] = [],
         variants: Optional[int] = None,
     ) -> Tuple[List["Image.Image"], List[str], List[str]]:
+        # 验证模型参数
+        if not default_config.validate_gpt_image_model(model):
+            raise GrsaiAPIError(
+                f"不支持的模型: {model}. 支持的选项: {', '.join(default_config.SUPPORTED_GPT_IMAGE_MODELS)}"
+            )
+
         # 构建请求数据
         payload = {
             "model": model,

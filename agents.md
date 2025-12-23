@@ -5,7 +5,7 @@
 ## 1. 项目定位与整体流程
 - **目标**：把 GrsAI 平台的多模型生成功能封装成 ComfyUI 节点，覆盖文生图、图生图、多图融合与 Nano Banana 专用模型。
 - **核心流程**：节点收集输入 → 上传参考图（可选）→ 调用 `GrsaiAPI` → 并发等待结果 → 下载图像 → 转换为 ComfyUI 张量并回传状态文本。
-- **三大模型族**：Flux.1 Kontext 系列、GPT Image（sora-image）、Nano Banana（含 fast 变体）。
+- **三大模型族**：Flux.1 Kontext 系列、GPT Image（sora-image / gpt-image-1.5）、Nano Banana（含 fast/pro/pro-vt）。
 
 ## 2. 模块结构速览
 
@@ -48,12 +48,14 @@
 
 ### 5.2 GPT Image 系列（`gpt_image_nodes.py`）
 - `_GPTImageNodeBase` 负责文生图与图生图共享逻辑。
-- `variants` 控制批量数量；图生图可接入 1–6 张参考图，上传流程与 Flux 多图类似。
+- 节点参数新增 `model` 选项（支持 `sora-image` 与 `gpt-image-1.5`）。
+- `variants` 控制批量数量（支持 1 或 2）；图生图可接入 1–6 张参考图，上传流程与 Flux 多图类似。
 - 输出为将多张 PIL 图拼接成批量张量，状态文案区分参考图数量与成功计数。
 
 ### 5.3 Nano Banana 节点（`nano_banana_nodes.py`）
 - 单节点兼顾文生图/图生图：无输入图则文生，有图则编辑。
 - 可选 `use_aspect_ratio` 控制是否下发 `aspectRatio`，默认 `auto`。
+- `image_size` 仅在 `nano-banana-pro` / `nano-banana-pro-vt` 生效，不支持模型会忽略。
 - 上传路径必须显式传入 API Key（避免依赖环境污染），并对每张输入图做清理。
 - `SuppressFalLogs` 在上传/请求阶段降低 HTTP 噪声，提升终端可读性。
 
@@ -91,10 +93,9 @@
 
 以上内容可作为继续开发或排障时的结构化参考。
 
-## 10. 开发计划：支持 `nano-banana-pro` 与 `imageSize`
-- 文档确认：依据 `ref/nano-banana-pro.html`，新增模型 `nano-banana-pro` 支持可选参数 `imageSize`（字符串），取值 `1K` / `2K` / `4K`，默认 `1K`，仅该模型支持。
-- 配置与校验：在 `config.py` 增加 Nano Banana 输出尺寸枚举与校验方法，作为节点下拉和 API 入参的单一来源；明确非 `nano-banana-pro` 模型传 `imageSize` 时需拒绝或自动忽略，并给出友好错误提示。
-- API 客户端：为 `GrsaiAPI.banana_generate_image` 添加 `image_size` 可选参数，序列化为 `imageSize` 下发；在调用前绑定模型与尺寸的合法性校验，保持旧模型调用不变。
-- 节点层：在 `GrsaiNanoBanana_Node.INPUT_TYPES` 中加入模型选项 `nano-banana-pro` 与 `image_size` 选择（默认 `1K`），执行时仅在选用 `nano-banana-pro` 时传递该字段；状态文本可包含所用模型/尺寸以便排障。
-- 测试：扩展 `test_banana.py` 覆盖 `nano-banana-pro` 基本生成流程，并补充 `imageSize` 取值校验（含非法组合的预期错误/忽略行为）；必要时更新占位尺寸估算逻辑。
-- 文档同步：在 `README.md`/节点说明处标注新模型与 `imageSize` 用法、限制与默认值，保证使用者能从 UI 与文档快速获取差异信息。
+## 10. nano-banana-pro / nano-banana-pro-vt 支持情况
+- 模型列表已包含 `nano-banana-pro` 与 `nano-banana-pro-vt`，节点下拉可选。
+- `imageSize` 已实现，仅在 pro/pro-vt 生效，支持 `1K` / `2K` / `4K`，默认 `1K`。
+- 节点侧会在非支持模型时忽略 `image_size`，非法值直接报错并提示可选项。
+- API 客户端在支持模型时下发 `imageSize`，并进行相同的尺寸校验。
+- 状态文本会带上模型与 `imageSize`，便于排障与复现。

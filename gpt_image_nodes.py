@@ -136,7 +136,11 @@ class GPTImage_TextToImage(_GPTImageNodeBase):
                         "default": "A colorful and stylized mechanical bird sculpture, with bright blue and green body, orange accent stripes, and a white head. The bird has a smooth, polished surface and is positioned as if perched on a branch. The sculpture's pieces are segmented, giving it a modular, toy-like appearance, with visible joints between the segments. The background is a soft, blurred green to evoke a natural, outdoors feel. The word 'FLUX' is drawn with a large white touch on it, with distinct textures",
                     },
                 ),
-                "variants": ([1, 2, 3, 4], {"default": 1}),
+                "model": (
+                    default_config.SUPPORTED_GPT_IMAGE_MODELS,
+                    {"default": "sora-image"},
+                ),
+                "variants": ([1, 2], {"default": 1}),
                 "size": (
                     ["auto", "1:1", "2:3", "3:2"],
                     {"default": "auto"},
@@ -154,7 +158,7 @@ class GPTImage_TextToImage(_GPTImageNodeBase):
 
         variants = kwargs.pop("variants")
         final_prompt = kwargs.pop("prompt")
-        model = "sora-image"
+        model = kwargs.pop("model")
 
         results_pil, result_urls, errors = self._execute_generation(
             grsai_api_key, final_prompt, model, [], variants, **kwargs
@@ -166,7 +170,7 @@ class GPTImage_TextToImage(_GPTImageNodeBase):
             )
 
         success_count = len(results_pil)
-        final_status = f"文生图模式 | 成功生成: {success_count}/{variants} 张图像"
+        final_status = f"文生图模式 | 模型: {model} | 成功生成: {success_count}/{variants} 张图像"
         if errors:
             final_status += f" | 失败: {len(errors)} 张"
 
@@ -188,6 +192,10 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
                         "multiline": True,
                         "default": "The character is sitting cross-legged on the sofa, and the Dalmatian is lying on the blanket sleeping.",
                     },
+                ),
+                "model": (
+                    default_config.SUPPORTED_GPT_IMAGE_MODELS,
+                    {"default": "sora-image"},
                 ),
                 "variants": ([1, 2], {"default": 1}),
                 "size": (
@@ -211,7 +219,7 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
     def execute(self, **kwargs):
         images_in = [
             kwargs.get(f"image_{i}")
-            for i in range(1, 6)
+            for i in range(1, 7)
             if kwargs.get(f"image_{i}") is not None
         ]
 
@@ -263,9 +271,9 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
                     os.unlink(path)
 
         variants = kwargs.pop("variants")
-        model = "sora-image"
+        model = kwargs.pop("model")
         kwargs.pop("prompt")
-        for i in range(1, 6):
+        for i in range(1, 7):
             kwargs.pop(f"image_{i}", None)
 
         results_pil, result_urls, errors = self._execute_generation(
@@ -283,7 +291,7 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
             )
 
         success_count = len(results_pil)
-        final_status = f"图生图模式 | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {success_count}/{variants} 张图像"
+        final_status = f"图生图模式 | 模型: {model} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {success_count}/{variants} 张图像"
         if errors:
             final_status += f" | 失败: {len(errors)} 张"
 
