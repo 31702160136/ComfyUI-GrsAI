@@ -223,11 +223,6 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
             if kwargs.get(f"image_{i}") is not None
         ]
 
-        if not images_in:
-            return self._create_error_result(
-                "Error: node requires at least one image input."
-            )
-
         grsai_api_key = default_config.get_api_key()
         if not grsai_api_key:
             return self._create_error_result(default_config.api_key_error_message)
@@ -235,41 +230,41 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
         os.environ["GRSAI_API_KEY"] = grsai_api_key
 
         uploaded_urls = []
-        temp_files = []
-        try:
-            for i, image_tensor in enumerate(images_in):
-                if image_tensor is None:
-                    continue
+        if images_in:
+            temp_files = []
+            try:
+                for i, image_tensor in enumerate(images_in):
+                    if image_tensor is None:
+                        continue
 
-                pil_images = tensor_to_pil(image_tensor)
-                if not pil_images:
-                    continue
+                    pil_images = tensor_to_pil(image_tensor)
+                    if not pil_images:
+                        continue
 
-                with tempfile.NamedTemporaryFile(
-                    suffix=f"_{i}.png", delete=False
-                ) as temp_file:
-                    pil_images[0].save(temp_file, "PNG")
-                    temp_files.append(temp_file.name)
+                    with tempfile.NamedTemporaryFile(
+                        suffix=f"_{i}.png", delete=False
+                    ) as temp_file:
+                        pil_images[0].save(temp_file, "PNG")
+                        temp_files.append(temp_file.name)
 
-                with SuppressFalLogs():
-                    uploaded_urls.append(upload_file_zh(temp_files[-1]))
+                    with SuppressFalLogs():
+                        uploaded_urls.append(upload_file_zh(temp_files[-1]))
 
-            if not uploaded_urls:
+                if not uploaded_urls:
+                    return self._create_error_result(
+                        "All input images could not be processed or uploaded."
+                    )
+
+            except Exception as e:
                 return self._create_error_result(
-                    "All input images could not be processed or uploaded."
+                    f"Multi-Image upload failed: {format_error_message(e)}"
                 )
+            finally:
+                for path in temp_files:
+                    if os.path.exists(path):
+                        os.unlink(path)
 
-            final_prompt = kwargs["prompt"]
-
-        except Exception as e:
-            return self._create_error_result(
-                f"Multi-Image upload failed: {format_error_message(e)}"
-            )
-        finally:
-            for path in temp_files:
-                if os.path.exists(path):
-                    os.unlink(path)
-
+        final_prompt = kwargs["prompt"]
         variants = kwargs.pop("variants")
         model = kwargs.pop("model")
         kwargs.pop("prompt")
@@ -291,7 +286,9 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
             )
 
         success_count = len(results_pil)
-        final_status = f"图生图模式 | 模型: {model} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {success_count}/{variants} 张图像"
+        mode_str = "图生图模式" if uploaded_urls else "文生图模式"
+        ref_str = f" | 参考图片: {len(uploaded_urls)} 张" if uploaded_urls else ""
+        final_status = f"{mode_str} | 模型: {model}{ref_str} | 成功生成: {success_count}/{variants} 张图像"
         if errors:
             final_status += f" | 失败: {len(errors)} 张"
 
