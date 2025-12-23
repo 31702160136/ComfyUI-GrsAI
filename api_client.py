@@ -189,7 +189,19 @@ class GrsaiAPI:
                 raise e
             raise GrsaiAPIError(format_error_message(e, "图像生成"))
 
-        status = response["status"]
+        # DEBUG: 打印原始响应以便排查
+        print(f"🔍 API原始响应: {json.dumps(response, indent=2, ensure_ascii=False)}")
+
+        if not isinstance(response, dict):
+             raise GrsaiAPIError(f"API响应格式错误: 期望字典，实际为 {type(response)}")
+
+        status = response.get("status")
+        if status is None:
+            # 如果没有status字段，可能是直接报错了但http code是200
+            if "error" in response:
+                 raise GrsaiAPIError(f"API返回错误: {response['error']}")
+            raise GrsaiAPIError(f"API响应缺失 'status' 字段: {response}")
+
         if status != "succeeded":
             print(f"🎨 图像生成失败: {response['id']}")
             print(json.dumps(response, indent=4, ensure_ascii=False))
