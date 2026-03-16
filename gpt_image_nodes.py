@@ -136,7 +136,11 @@ class GPTImage_TextToImage(_GPTImageNodeBase):
                         "default": "A colorful and stylized mechanical bird sculpture, with bright blue and green body, orange accent stripes, and a white head. The bird has a smooth, polished surface and is positioned as if perched on a branch. The sculpture's pieces are segmented, giving it a modular, toy-like appearance, with visible joints between the segments. The background is a soft, blurred green to evoke a natural, outdoors feel. The word 'FLUX' is drawn with a large white touch on it, with distinct textures",
                     },
                 ),
-                "variants": ([1, 2, 3, 4], {"default": 1}),
+                "model": (
+                    default_config.SUPPORTED_GPT_IMAGE_MODELS,
+                    {"default": "sora-image"},
+                ),
+                "variants": ([1, 2], {"default": 1}),
                 "size": (
                     ["auto", "1:1", "2:3", "3:2"],
                     {"default": "auto"},
@@ -154,7 +158,7 @@ class GPTImage_TextToImage(_GPTImageNodeBase):
 
         variants = kwargs.pop("variants")
         final_prompt = kwargs.pop("prompt")
-        model = "sora-image"
+        model = kwargs.pop("model")
 
         results_pil, result_urls, errors = self._execute_generation(
             grsai_api_key, final_prompt, model, [], variants, **kwargs
@@ -166,7 +170,7 @@ class GPTImage_TextToImage(_GPTImageNodeBase):
             )
 
         success_count = len(results_pil)
-        final_status = f"文生图模式 | 成功生成: {success_count}/{variants} 张图像"
+        final_status = f"文生图模式 | 模型: {model} | 成功生成: {success_count}/{variants} 张图像"
         if errors:
             final_status += f" | 失败: {len(errors)} 张"
 
@@ -188,6 +192,10 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
                         "multiline": True,
                         "default": "The character is sitting cross-legged on the sofa, and the Dalmatian is lying on the blanket sleeping.",
                     },
+                ),
+                "model": (
+                    default_config.SUPPORTED_GPT_IMAGE_MODELS,
+                    {"default": "sora-image"},
                 ),
                 "variants": ([1, 2], {"default": 1}),
                 "size": (
@@ -211,14 +219,9 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
     def execute(self, **kwargs):
         images_in = [
             kwargs.get(f"image_{i}")
-            for i in range(1, 6)
+            for i in range(1, 7)
             if kwargs.get(f"image_{i}") is not None
         ]
-
-        if not images_in:
-            return self._create_error_result(
-                "Error: node requires at least one image input."
-            )
 
         grsai_api_key = default_config.get_api_key()
         if not grsai_api_key:
@@ -227,45 +230,45 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
         os.environ["GRSAI_API_KEY"] = grsai_api_key
 
         uploaded_urls = []
-        temp_files = []
-        try:
-            for i, image_tensor in enumerate(images_in):
-                if image_tensor is None:
-                    continue
+        if images_in:
+            temp_files = []
+            try:
+                for i, image_tensor in enumerate(images_in):
+                    if image_tensor is None:
+                        continue
 
-                pil_images = tensor_to_pil(image_tensor)
-                if not pil_images:
-                    continue
+                    pil_images = tensor_to_pil(image_tensor)
+                    if not pil_images:
+                        continue
 
-                with tempfile.NamedTemporaryFile(
-                    suffix=f"_{i}.png", delete=False
-                ) as temp_file:
-                    pil_images[0].save(temp_file, "PNG")
-                    temp_files.append(temp_file.name)
+                    with tempfile.NamedTemporaryFile(
+                        suffix=f"_{i}.png", delete=False
+                    ) as temp_file:
+                        pil_images[0].save(temp_file, "PNG")
+                        temp_files.append(temp_file.name)
 
-                with SuppressFalLogs():
-                    uploaded_urls.append(upload_file_zh(temp_files[-1]))
+                    with SuppressFalLogs():
+                        uploaded_urls.append(upload_file_zh(temp_files[-1]))
 
-            if not uploaded_urls:
+                if not uploaded_urls:
+                    return self._create_error_result(
+                        "All input images could not be processed or uploaded."
+                    )
+
+            except Exception as e:
                 return self._create_error_result(
-                    "All input images could not be processed or uploaded."
+                    f"Multi-Image upload failed: {format_error_message(e)}"
                 )
+            finally:
+                for path in temp_files:
+                    if os.path.exists(path):
+                        os.unlink(path)
 
-            final_prompt = kwargs["prompt"]
-
-        except Exception as e:
-            return self._create_error_result(
-                f"Multi-Image upload failed: {format_error_message(e)}"
-            )
-        finally:
-            for path in temp_files:
-                if os.path.exists(path):
-                    os.unlink(path)
-
+        final_prompt = kwargs["prompt"]
         variants = kwargs.pop("variants")
-        model = "sora-image"
+        model = kwargs.pop("model")
         kwargs.pop("prompt")
-        for i in range(1, 6):
+        for i in range(1, 7):
             kwargs.pop(f"image_{i}", None)
 
         results_pil, result_urls, errors = self._execute_generation(
@@ -283,7 +286,9 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
             )
 
         success_count = len(results_pil)
-        final_status = f"图生图模式 | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {success_count}/{variants} 张图像"
+        mode_str = "图生图模式" if uploaded_urls else "文生图模式"
+        ref_str = f" | 参考图片: {len(uploaded_urls)} 张" if uploaded_urls else ""
+        final_status = f"{mode_str} | 模型: {model}{ref_str} | 成功生成: {success_count}/{variants} 张图像"
         if errors:
             final_status += f" | 失败: {len(errors)} 张"
 
