@@ -170,7 +170,7 @@ class GrsaiAPI:
         # 这种方式更简洁且易于维护
         optional_params = {
             "size": size,
-            "variants": variants,
+            "variants": 1,
         }
 
         for key, value in optional_params.items():
@@ -193,13 +193,13 @@ class GrsaiAPI:
         print(f"🔍 API原始响应: {json.dumps(response, indent=2, ensure_ascii=False)}")
 
         if not isinstance(response, dict):
-             raise GrsaiAPIError(f"API响应格式错误: 期望字典，实际为 {type(response)}")
+            raise GrsaiAPIError(f"API响应格式错误: 期望字典，实际为 {type(response)}")
 
         status = response.get("status")
         if status is None:
             # 如果没有status字段，可能是直接报错了但http code是200
             if "error" in response:
-                 raise GrsaiAPIError(f"API返回错误: {response['error']}")
+                raise GrsaiAPIError(f"API返回错误: {response['error']}")
             raise GrsaiAPIError(f"API响应缺失 'status' 字段: {response}")
 
         if status != "succeeded":
@@ -276,7 +276,6 @@ class GrsaiAPI:
             "prompt": prompt,
             "urls": urls,
             "shutProgress": True,
-            "cdn": "zh",
         }
 
         if image_size:
@@ -297,7 +296,6 @@ class GrsaiAPI:
 
         print(json.dumps(payload, indent=4, ensure_ascii=False))
         print("🍌 开始调用 Nano Banana 接口...")
-
         try:
             response = self._make_request("POST", "/v1/draw/nano-banana", data=payload)
         except Exception as e:
@@ -326,7 +324,7 @@ class GrsaiAPI:
         def thread_download_image(image_url: str):
             try:
                 print("⬇️ 正在下载生成的图像...")
-                timeout = self.config.get_config("timeout", 120)
+                timeout = self.config.get_config("timeout", 220)
                 pil_image = download_image(image_url, timeout=timeout)
                 if pil_image is None:
                     raise GrsaiAPIError("图像下载失败，可能是网络超时或服务异常")
@@ -336,7 +334,9 @@ class GrsaiAPI:
                 raise GrsaiAPIError(f"下载或处理图像时出错: {str(e)}")
 
         with ThreadPoolExecutor(max_workers=len(results_urls)) as executor:
-            futures = {executor.submit(thread_download_image, url): url for url in results_urls}
+            futures = {
+                executor.submit(thread_download_image, url): url for url in results_urls
+            }
             for future in as_completed(futures):
                 try:
                     result = future.result()

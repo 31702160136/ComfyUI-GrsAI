@@ -1,15 +1,16 @@
 """
 ComfyUI节点实现
-定义GPT Image图像生成节点
+定义 GPT Image 图像生成节点（文生图 / 图生图 / 多图）
 """
 
-import torch
 import os
 import tempfile
 import logging
 from typing import Any, Tuple, Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
+import random
+
+import torch
 
 # 尝试相对导入，如果失败则使用绝对导入
 try:
@@ -17,7 +18,6 @@ try:
     from .api_client import GrsaiAPI, GrsaiAPIError
     from .config import default_config
     from .utils import (
-        download_image,
         pil_to_tensor,
         format_error_message,
         tensor_to_pil,
@@ -26,11 +26,11 @@ except ImportError:
     from upload import upload_file_zh
     from api_client import GrsaiAPI, GrsaiAPIError
     from config import default_config
-    from utils import download_image, pil_to_tensor, format_error_message, tensor_to_pil
+    from utils import pil_to_tensor, format_error_message, tensor_to_pil
 
 
 class SuppressFalLogs:
-    """临时抑制FAL相关的详细HTTP日志的上下文管理器"""
+    """临时抑制HTTP相关的详细日志的上下文管理器"""
 
     def __init__(self):
         self.loggers_to_suppress = [
@@ -38,10 +38,9 @@ class SuppressFalLogs:
             "httpcore",
             "urllib3.connectionpool",
         ]
-        self.original_levels = {}
+        self.original_levels: Dict[str, int] = {}
 
     def __enter__(self):
-        # 保存原始日志级别并设置为WARNING以上
         for logger_name in self.loggers_to_suppress:
             logger = logging.getLogger(logger_name)
             self.original_levels[logger_name] = logger.level
@@ -49,19 +48,110 @@ class SuppressFalLogs:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # 恢复原始日志级别
         for logger_name, original_level in self.original_levels.items():
-            logger = logging.getLogger(logger_name)
-            logger.setLevel(original_level)
+            logging.getLogger(logger_name).setLevel(original_level)
 
 
-class _GPTImageNodeBase:
+class GrsaiGPTImage_Node:
     """
-    所有GPT Image节点的内部基类，处理通用逻辑。
+    GPT Image 图像生成节点
     """
 
     FUNCTION = "execute"
     CATEGORY = "GrsAI/GPT Image"
+
+    def _execute_generation(
+        self,
+        apikey: str,
+        final_prompt: str,
+        num_images: int,
+        model: str,
+        urls: list[str] = [],
+        aspect_ratio: str = "auto",
+        **kwargs,
+    ) -> Tuple[List[Any], List[str], List[str]]:
+        results_pil, result_urls, errors = [], [], []
+
+        def generate_single_image():
+            try:
+                api_client = GrsaiAPI(api_key=apikey)
+                api_params = {
+                    "prompt": final_prompt,
+                    "model": model,
+                    "urls": urls,
+                    "size": aspect_ratio,
+                }
+                api_params.update(kwargs)
+                pil_imgs, img_urls, errs = api_client.gpt_image_generate_image(
+                    **api_params
+                )
+                return pil_imgs, img_urls, errs
+            except Exception as e:
+                return e
+
+        with ThreadPoolExecutor(max_workers=num_images) as executor:
+            future_to_seed = {
+                executor.submit(generate_single_image): s for s in range(num_images)
+            }
+
+            for future in as_completed(future_to_seed):
+                try:
+                    result = future.result()
+                    if isinstance(result, Exception):
+                        # 简化错误信息，不显示技术细节
+                        errors.append(f"图像生成失败")
+                    else:
+                        pil_imgs, img_urls, errs = result
+                        results_pil.extend(pil_imgs)
+                        result_urls.extend(img_urls)
+                        errors.extend(errs)
+                except Exception as exc:
+                    errors.append(f"图像生成异常")
+
+        return results_pil, result_urls, errors
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": "A beautiful girl with long black hair, wearing a white dress, standing in a beautiful garden, looking at the camera.",
+                    },
+                ),
+                "apikey": ("STRING", {"default": "请输入您的APIKEY: sk-xxxxxxx"}),
+                "model": (
+                    [
+                        "sora-image",
+                        "gpt-image-1.5",
+                    ],
+                    {"default": "sora-image"},
+                ),
+                "num_images": ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], {"default": 1}),
+            },
+            "optional": {
+                "aspect_ratio": (
+                    [
+                        "auto",
+                        "1:1",
+                        "2:3",
+                        "3:2",
+                    ],
+                    {"default": "auto"},
+                ),
+                "image_1": ("IMAGE",),
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
+                "image_5": ("IMAGE",),
+                "image_6": ("IMAGE",),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE", "STRING")
+    RETURN_NAMES = ("image", "status")
 
     @classmethod
     def IS_CHANGED(s, **kwargs):
@@ -81,162 +171,29 @@ class _GPTImageNodeBase:
             "result": (image_out, f"失败: {error_message}"),
         }
 
-    def _execute_generation(
-        self,
-        grsai_api_key: str,
-        final_prompt: str,
-        model: str,
-        urls: list[str],
-        variants: int,
-        **kwargs,
-    ) -> Tuple[List[Any], List[str], List[str]]:
-        results_pil, result_urls, errors = [], [], []
-
-        def generate_image():
-            try:
-                api_client = GrsaiAPI(api_key=grsai_api_key)
-                api_params = {
-                    "prompt": final_prompt,
-                    "model": model,
-                    "urls": urls,
-                    "variants": variants,
-                }
-                api_params.update(kwargs)
-                pil_images, image_urls, api_errors = (
-                    api_client.gpt_image_generate_image(**api_params)
-                )
-                return pil_images, image_urls, api_errors
-            except Exception as e:
-                return None, None, e
-
-        result = generate_image()
-        pil_images, image_urls, api_errors = result
-        if pil_images is not None:
-            results_pil.extend(pil_images)
-        if image_urls is not None:
-            result_urls.extend(image_urls)
-        if isinstance(api_errors, list):
-            errors.extend(api_errors)
-        elif isinstance(api_errors, Exception):
-            errors.append(str(api_errors))
-
-        return results_pil, result_urls, errors
-
-
-# 节点1: 文生图
-class GPTImage_TextToImage(_GPTImageNodeBase):
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": (
-                    "STRING",
-                    {
-                        "multiline": True,
-                        "default": "A colorful and stylized mechanical bird sculpture, with bright blue and green body, orange accent stripes, and a white head. The bird has a smooth, polished surface and is positioned as if perched on a branch. The sculpture's pieces are segmented, giving it a modular, toy-like appearance, with visible joints between the segments. The background is a soft, blurred green to evoke a natural, outdoors feel. The word 'FLUX' is drawn with a large white touch on it, with distinct textures",
-                    },
-                ),
-                "model": (
-                    default_config.SUPPORTED_GPT_IMAGE_MODELS,
-                    {"default": "sora-image"},
-                ),
-                "variants": ([1, 2], {"default": 1}),
-                "size": (
-                    ["auto", "1:1", "2:3", "3:2"],
-                    {"default": "auto"},
-                ),
-            }
-        }
-
-    RETURN_TYPES = ("IMAGE", "STRING")
-    RETURN_NAMES = ("image", "status")
-
     def execute(self, **kwargs):
-        grsai_api_key = default_config.get_api_key()
-        if not grsai_api_key:
-            return self._create_error_result(default_config.api_key_error_message)
-
-        variants = kwargs.pop("variants")
-        final_prompt = kwargs.pop("prompt")
+        prompt = kwargs.pop("prompt")
         model = kwargs.pop("model")
+        apikey = kwargs.pop("apikey")
+        aspect_ratio = kwargs.pop("aspect_ratio", None)
+        num_images = kwargs.pop("num_images", 1)
 
-        results_pil, result_urls, errors = self._execute_generation(
-            grsai_api_key, final_prompt, model, [], variants, **kwargs
-        )
-
-        if not results_pil:
-            return self._create_error_result(
-                f"All image generations failed.\n{'; '.join(errors)}"
-            )
-
-        success_count = len(results_pil)
-        final_status = f"文生图模式 | 模型: {model} | 成功生成: {success_count}/{variants} 张图像"
-        if errors:
-            final_status += f" | 失败: {len(errors)} 张"
-
-        return {
-            "ui": {"string": [final_status]},
-            "result": (pil_to_tensor(results_pil), final_status),
-        }
-
-
-# 节点3: 图生图
-class GPTImage_ImageToImage(_GPTImageNodeBase):
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": (
-                    "STRING",
-                    {
-                        "multiline": True,
-                        "default": "The character is sitting cross-legged on the sofa, and the Dalmatian is lying on the blanket sleeping.",
-                    },
-                ),
-                "model": (
-                    default_config.SUPPORTED_GPT_IMAGE_MODELS,
-                    {"default": "sora-image"},
-                ),
-                "variants": ([1, 2], {"default": 1}),
-                "size": (
-                    ["auto", "1:1", "2:3", "3:2"],
-                    {"default": "auto"},
-                ),
-            },
-            "optional": {
-                "image_1": ("IMAGE",),
-                "image_2": ("IMAGE",),
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
-                "image_5": ("IMAGE",),
-                "image_6": ("IMAGE",),
-            },
-        }
-
-    RETURN_TYPES = ("IMAGE", "STRING")
-    RETURN_NAMES = ("image", "status")
-
-    def execute(self, **kwargs):
-        images_in = [
+        # 收集可选输入图像
+        images_in: List[torch.Tensor] = [
             kwargs.get(f"image_{i}")
-            for i in range(1, 7)
+            for i in range(1, 11)
             if kwargs.get(f"image_{i}") is not None
         ]
+        for i in range(1, 11):
+            kwargs.pop(f"image_{i}", None)
 
-        grsai_api_key = default_config.get_api_key()
-        if not grsai_api_key:
-            return self._create_error_result(default_config.api_key_error_message)
+        uploaded_urls: List[str] = []
+        temp_files: List[str] = []
 
-        os.environ["GRSAI_API_KEY"] = grsai_api_key
-
-        uploaded_urls = []
+        # 若提供了参考图，则上传获取URL
         if images_in:
-            temp_files = []
             try:
                 for i, image_tensor in enumerate(images_in):
-                    if image_tensor is None:
-                        continue
-
                     pil_images = tensor_to_pil(image_tensor)
                     if not pil_images:
                         continue
@@ -248,62 +205,61 @@ class GPTImage_ImageToImage(_GPTImageNodeBase):
                         temp_files.append(temp_file.name)
 
                     with SuppressFalLogs():
-                        uploaded_urls.append(upload_file_zh(temp_files[-1]))
+                        uploaded_urls.append(
+                            upload_file_zh(api_key=apikey, file_path=temp_files[-1])
+                        )
 
                 if not uploaded_urls:
                     return self._create_error_result(
                         "All input images could not be processed or uploaded."
                     )
-
             except Exception as e:
                 return self._create_error_result(
-                    f"Multi-Image upload failed: {format_error_message(e)}"
+                    f"Image upload failed: {format_error_message(e)}"
                 )
             finally:
                 for path in temp_files:
                     if os.path.exists(path):
                         os.unlink(path)
 
-        final_prompt = kwargs["prompt"]
-        variants = kwargs.pop("variants")
-        model = kwargs.pop("model")
-        kwargs.pop("prompt")
-        for i in range(1, 7):
-            kwargs.pop(f"image_{i}", None)
-
-        results_pil, result_urls, errors = self._execute_generation(
-            grsai_api_key,
-            final_prompt,
-            model,
-            uploaded_urls,
-            variants,
-            **kwargs,
-        )
-
-        if not results_pil:
+        # 调用 GPT Image 接口
+        try:
+            with SuppressFalLogs():
+                pil_images, image_urls, errors = self._execute_generation(
+                    apikey=apikey,
+                    final_prompt=prompt,
+                    num_images=num_images,
+                    model=model,
+                    urls=uploaded_urls,
+                    aspect_ratio=aspect_ratio,
+                )
+        except Exception as e:
             return self._create_error_result(
-                f"All image generations failed.\n{'; '.join(errors)}"
+                f"GPT Image API 调用失败: {format_error_message(e)}"
             )
 
-        success_count = len(results_pil)
-        mode_str = "图生图模式" if uploaded_urls else "文生图模式"
-        ref_str = f" | 参考图片: {len(uploaded_urls)} 张" if uploaded_urls else ""
-        final_status = f"{mode_str} | 模型: {model}{ref_str} | 成功生成: {success_count}/{variants} 张图像"
-        if errors:
-            final_status += f" | 失败: {len(errors)} 张"
+        if not pil_images:
+            error_msg = (
+                "All image generations failed."
+                if not images_in
+                else "Image editing failed."
+            )
+            detail = f"; {errors}" if errors else ""
+            return self._create_error_result(error_msg + detail)
+
+        size_note = f" | aspectRatio: {aspect_ratio}" if aspect_ratio else ""
+        status = f"GPT Image | 模型: {model}{size_note} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
 
         return {
-            "ui": {"string": [final_status]},
-            "result": (pil_to_tensor(results_pil), final_status),
+            "ui": {"string": [status]},
+            "result": (pil_to_tensor(pil_images), status),
         }
 
 
 NODE_CLASS_MAPPINGS = {
-    "GPTImage_TextToImage": GPTImage_TextToImage,
-    "GPTImage_ImageToImage": GPTImage_ImageToImage,
+    "Grsai_GPTImage": GrsaiGPTImage_Node,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "GPTImage_TextToImage": "🎨 GrsAI GPT Image - Text to Image",
-    "GPTImage_ImageToImage": "🎨 GrsAI GPT Image - Image to Image",
+    "Grsai_GPTImage": "🎨 GrsAI GPT Image",
 }

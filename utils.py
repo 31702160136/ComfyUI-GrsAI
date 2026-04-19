@@ -116,7 +116,7 @@ def pil_to_tensor(
     if not isinstance(pil_images, list):
         pil_images = [pil_images]
 
-    tensors = []
+    processed_images: List[Image.Image] = []
     for pil_image in pil_images:
         # 如果保留透明度且图像有alpha通道，则保持RGBA格式
         if preserve_transparency and pil_image.mode == "RGBA":
@@ -134,11 +134,9 @@ def pil_to_tensor(
             else:
                 processed_image = pil_image
 
-        img_array = np.array(processed_image).astype(np.float32) / 255.0
-        tensor = torch.from_numpy(img_array)[None,]
-        tensors.append(tensor)
+        processed_images.append(processed_image)
 
-    if not tensors:
+    if not processed_images:
         # 如果列表为空，返回一个空的占位符张量
         channels = (
             4
@@ -146,6 +144,39 @@ def pil_to_tensor(
             else 3
         )
         return torch.empty((0, 1, 1, channels), dtype=torch.float32)
+
+    # 批次内若存在多种尺寸/通道，统一对齐到最大尺寸 + 最大通道数
+    # 通过“居中填充”而非缩放，避免内容失真；
+    # RGBA 用透明填充，RGB 用 bg_color 填充。
+    max_w = max(img.width for img in processed_images)
+    max_h = max(img.height for img in processed_images)
+    has_rgba = any(img.mode == "RGBA" for img in processed_images)
+    target_mode = "RGBA" if has_rgba else "RGB"
+    if target_mode == "RGBA":
+        fill_color: Tuple[int, ...] = (0, 0, 0, 0)
+    else:
+        fill_color = bg_color
+
+    aligned_images: List[Image.Image] = []
+    for img in processed_images:
+        if img.mode != target_mode:
+            img = img.convert(target_mode)
+        if img.size == (max_w, max_h):
+            aligned_images.append(img)
+            continue
+        canvas = Image.new(target_mode, (max_w, max_h), fill_color)
+        offset = ((max_w - img.width) // 2, (max_h - img.height) // 2)
+        if target_mode == "RGBA":
+            canvas.paste(img, offset, img)
+        else:
+            canvas.paste(img, offset)
+        aligned_images.append(canvas)
+
+    tensors = []
+    for img in aligned_images:
+        img_array = np.array(img).astype(np.float32) / 255.0
+        tensor = torch.from_numpy(img_array)[None,]
+        tensors.append(tensor)
 
     return torch.cat(tensors, dim=0)
 

@@ -40,7 +40,17 @@ class GrsaiConfig:
     }
 
     # Flux 节点使用的宽高比选项
-    SUPPORTED_ASPECT_RATIOS = ["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16", "9:21"]
+    SUPPORTED_ASPECT_RATIOS = [
+        "21:9",
+        "16:9",
+        "3:2",
+        "4:3",
+        "1:1",
+        "3:4",
+        "2:3",
+        "9:16",
+        "9:21",
+    ]
 
     # Nano Banana API 支持的宽高比选项
     SUPPORTED_NANO_BANANA_AR = [
@@ -63,19 +73,28 @@ class GrsaiConfig:
         "nano-banana",
         "nano-banana-pro",
         "nano-banana-pro-vt",
+        "nano-banana-pro-cl",
+        "nano-banana-2-cl",
+        "nano-banana-2-cl-4k",
     ]
 
     # GPT Image 支持的模型列表
     SUPPORTED_GPT_IMAGE_MODELS = ["sora-image", "gpt-image-1.5"]
 
     # 支持 imageSize 参数的 Nano Banana 模型
-    NANO_BANANA_MODELS_SUPPORTING_IMAGE_SIZE = ["nano-banana-pro", "nano-banana-pro-vt"]
+    NANO_BANANA_MODELS_SUPPORTING_IMAGE_SIZE = [
+        "nano-banana-pro",
+        "nano-banana-pro-vt",
+        "nano-banana-pro-cl",
+        "nano-banana-2",
+        "nano-banana-2-cl",
+    ]
 
     # Nano Banana PRO / PRO-VT 支持的输出尺寸
     SUPPORTED_NANO_BANANA_SIZES = ["1K", "2K", "4K"]
 
     # 支持的输出格式
-    SUPPORTED_OUTPUT_FORMATS = ["jpeg", "png"]
+    SUPPORTED_OUTPUT_FORMATS = ["png"]
 
     def __init__(self):
         """

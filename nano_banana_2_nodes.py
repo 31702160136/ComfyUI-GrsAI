@@ -52,14 +52,14 @@ class SuppressFalLogs:
             logging.getLogger(logger_name).setLevel(original_level)
 
 
-class GrsaiNanoBanana_Node:
+class GrsaiNanoBanana2_Node:
     """
     Nano Banana 图像生成节点
     - 可选多图作为参考：不输入图像时为文生图；输入1张或多张时为图生图
     """
 
     FUNCTION = "execute"
-    CATEGORY = "GrsAI/Nano Banana"
+    CATEGORY = "GrsAI/Nano Banana 2"
 
     def _execute_generation(
         self,
@@ -69,6 +69,7 @@ class GrsaiNanoBanana_Node:
         model: str,
         urls: list[str] = [],
         aspect_ratio: str = "auto",
+        image_size: str = "1K",
         **kwargs,
     ) -> Tuple[List[Any], List[str], List[str]]:
         results_pil, result_urls, errors = [], [], []
@@ -81,6 +82,7 @@ class GrsaiNanoBanana_Node:
                     "model": model,
                     "urls": urls,
                     "aspect_ratio": aspect_ratio,
+                    "image_size": image_size,
                 }
                 api_params.update(kwargs)
                 pil_imgs, img_urls, errs = api_client.banana_generate_image(
@@ -125,10 +127,11 @@ class GrsaiNanoBanana_Node:
                 "apikey": ("STRING", {"default": "请输入您的APIKEY: sk-xxxxxxx"}),
                 "model": (
                     [
-                        "nano-banana-fast",
-                        "nano-banana",
+                        "nano-banana-2",
+                        "nano-banana-2-cl",
+                        "nano-banana-2-cl-4k",
                     ],
-                    {"default": "nano-banana-fast"},
+                    {"default": "nano-banana-2"},
                 ),
                 "num_images": ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], {"default": 1}),
             },
@@ -146,8 +149,20 @@ class GrsaiNanoBanana_Node:
                         "5:4",
                         "4:5",
                         "21:9",
+                        "4:1",
+                        "1:4",
+                        "8:1",
+                        "1:8",
                     ],
                     {"default": "auto"},
+                ),
+                "image_size": (
+                    [
+                        "1K",
+                        "2K",
+                        "4K",
+                    ],
+                    {"default": "1K"},
                 ),
                 "image_1": ("IMAGE",),
                 "image_2": ("IMAGE",),
@@ -155,6 +170,10 @@ class GrsaiNanoBanana_Node:
                 "image_4": ("IMAGE",),
                 "image_5": ("IMAGE",),
                 "image_6": ("IMAGE",),
+                "image_7": ("IMAGE",),
+                "image_8": ("IMAGE",),
+                "image_9": ("IMAGE",),
+                "image_10": ("IMAGE",),
             },
         }
 
@@ -184,6 +203,7 @@ class GrsaiNanoBanana_Node:
         model = kwargs.pop("model")
         apikey = kwargs.pop("apikey")
         aspect_ratio = kwargs.pop("aspect_ratio", None)
+        image_size = kwargs.pop("image_size", "1K")
         num_images = kwargs.pop("num_images", 1)
 
         # 收集可选输入图像
@@ -240,6 +260,7 @@ class GrsaiNanoBanana_Node:
                     model=model,
                     urls=uploaded_urls,
                     aspect_ratio=aspect_ratio,
+                    image_size=image_size,
                 )
         except Exception as e:
             return self._create_error_result(
@@ -255,7 +276,8 @@ class GrsaiNanoBanana_Node:
             detail = f"; {errors}" if errors else ""
             return self._create_error_result(error_msg + detail)
 
-        status = f"Nano Banana | 模型: {model} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
+        size_note = f" | imageSize: {image_size}" if image_size else ""
+        status = f"Nano Banana | 模型: {model}{size_note} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
 
         return {
             "ui": {"string": [status]},
@@ -264,9 +286,9 @@ class GrsaiNanoBanana_Node:
 
 
 NODE_CLASS_MAPPINGS = {
-    "Grsai_NanoBanana": GrsaiNanoBanana_Node,
+    "Grsai_NanoBanana2": GrsaiNanoBanana2_Node,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Grsai_NanoBanana": "🍌 GrsAI Nano Banana - Text/Image",
+    "Grsai_NanoBanana2": "🍌 GrsAI Nano Banana 2 - Text/Image",
 }

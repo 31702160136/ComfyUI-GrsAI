@@ -90,7 +90,12 @@ def get_upload_token_zh(
 
 def upload_file(api_key: Optional[str] = None, file_path: str = "") -> str:
     # Backward compatibility: allow single positional file_path as first arg
-    if not file_path and isinstance(api_key, str) and api_key and not api_key.startswith("sk-"):
+    if (
+        not file_path
+        and isinstance(api_key, str)
+        and api_key
+        and not api_key.startswith("sk-")
+    ):
         file_path, api_key = api_key, None
     if not file_path:
         return ""
@@ -160,7 +165,12 @@ def upload_file(api_key: Optional[str] = None, file_path: str = "") -> str:
 
 def upload_file_zh(api_key: Optional[str] = None, file_path: str = "") -> str:
     # Backward compatibility: allow single positional file_path as first arg
-    if not file_path and isinstance(api_key, str) and api_key and not api_key.startswith("sk-"):
+    if (
+        not file_path
+        and isinstance(api_key, str)
+        and api_key
+        and not api_key.startswith("sk-")
+    ):
         file_path, api_key = api_key, None
     if not file_path:
         return ""
