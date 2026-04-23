@@ -146,37 +146,18 @@ class GrsaiAPI:
     def gpt_image_generate_image(
         self,
         prompt: str,
-        model: str = "sora-image",
-        size: Optional[str] = None,
+        model: str = "gpt-image-2",
+        aspect_ratio: Optional[str] = None,
         urls: List[str] = [],
-        variants: Optional[int] = None,
     ) -> Tuple[List["Image.Image"], List[str], List[str]]:
-        # 验证模型参数
-        if not default_config.validate_gpt_image_model(model):
-            raise GrsaiAPIError(
-                f"不支持的模型: {model}. 支持的选项: {', '.join(default_config.SUPPORTED_GPT_IMAGE_MODELS)}"
-            )
-
         # 构建请求数据
         payload = {
             "model": model,
             "prompt": prompt,
             "urls": urls,
             "shutProgress": True,
-            "cdn": "zh",
+            "aspectRatio": aspect_ratio,
         }
-
-        # 动态添加所有非空的可选参数
-        # 这种方式更简洁且易于维护
-        optional_params = {
-            "size": size,
-            "variants": 1,
-        }
-
-        for key, value in optional_params.items():
-            # 只有当值不是None，或者对于字符串，不是空字符串时，才添加到payload
-            if value is not None and value != "":
-                payload[key] = value
 
         print(json.dumps(payload, indent=4, ensure_ascii=False))
         print("🎨 开始生成图像...")

@@ -78,9 +78,6 @@ class GrsaiConfig:
         "nano-banana-2-cl-4k",
     ]
 
-    # GPT Image 支持的模型列表
-    SUPPORTED_GPT_IMAGE_MODELS = ["sora-image", "gpt-image-1.5"]
-
     # 支持 imageSize 参数的 Nano Banana 模型
     NANO_BANANA_MODELS_SUPPORTING_IMAGE_SIZE = [
         "nano-banana-pro",
@@ -171,10 +168,6 @@ class GrsaiConfig:
     def validate_safety_tolerance(self, safety_tolerance: int) -> bool:
         """验证安全容忍度是否在有效范围内"""
         return 0 <= safety_tolerance <= 6
-
-    def validate_gpt_image_model(self, model: str) -> bool:
-        """验证 GPT Image 模型是否支持"""
-        return model in self.SUPPORTED_GPT_IMAGE_MODELS
 
 
 # 全局配置实例

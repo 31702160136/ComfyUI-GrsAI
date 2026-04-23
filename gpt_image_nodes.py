@@ -79,7 +79,7 @@ class GrsaiGPTImage_Node:
                     "prompt": final_prompt,
                     "model": model,
                     "urls": urls,
-                    "size": aspect_ratio,
+                    "aspect_ratio": aspect_ratio,
                 }
                 api_params.update(kwargs)
                 pil_imgs, img_urls, errs = api_client.gpt_image_generate_image(
@@ -159,6 +159,8 @@ class GrsaiGPTImage_Node:
                 "image_4": ("IMAGE",),
                 "image_5": ("IMAGE",),
                 "image_6": ("IMAGE",),
+                "image_7": ("IMAGE",),
+                "image_8": ("IMAGE",),
             },
         }
 
@@ -193,10 +195,10 @@ class GrsaiGPTImage_Node:
         # 收集可选输入图像
         images_in: List[torch.Tensor] = [
             kwargs.get(f"image_{i}")
-            for i in range(1, 11)
+            for i in range(1, 9)
             if kwargs.get(f"image_{i}") is not None
         ]
-        for i in range(1, 11):
+        for i in range(1, 9):
             kwargs.pop(f"image_{i}", None)
 
         uploaded_urls: List[str] = []
