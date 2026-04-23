@@ -1,11 +1,6 @@
 """
-ComfyUI-GrsAI 节点注册入口
+ComfyUI-Grsai 节点注册入口
 """
-
-from .flux_nodes import (
-    NODE_CLASS_MAPPINGS as FLUX_NODE_CLASS_MAPPINGS,
-    NODE_DISPLAY_NAME_MAPPINGS as FLUX_NODE_DISPLAY_NAME_MAPPINGS,
-)
 
 from .gpt_image_nodes import (
     NODE_CLASS_MAPPINGS as GPT_IMAGE_NODE_CLASS_MAPPINGS,
@@ -29,7 +24,6 @@ from .nano_banana_2_nodes import (
 
 # 合并两组节点映射，供ComfyUI识别
 NODE_CLASS_MAPPINGS = {
-    **FLUX_NODE_CLASS_MAPPINGS,
     **GPT_IMAGE_NODE_CLASS_MAPPINGS,
     **BANANA_NODE_CLASS_MAPPINGS,
     **BANANA_PRO_NODE_CLASS_MAPPINGS,
@@ -37,7 +31,6 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    **FLUX_NODE_DISPLAY_NAME_MAPPINGS,
     **GPT_IMAGE_NODE_DISPLAY_NAME_MAPPINGS,
     **BANANA_NODE_DISPLAY_NAME_MAPPINGS,
     **BANANA_PRO_NODE_DISPLAY_NAME_MAPPINGS,
@@ -51,8 +44,8 @@ __all__ = [
 ]
 
 # 版本信息 - 必须与 pyproject.toml 中的版本保持完全一致
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 # 插件作者信息
-__author__ = "ComfyUI-GrsAI Team"
-__description__ = "GrsAI图像生成节点 - 支持GPT Image，Flux.1 Kontext"
+__author__ = "ComfyUI-Grsai Team"
+__description__ = "Grsai图像生成节点 - 支持GPT Image，Nano Banana 2, Nano Banana Pro"

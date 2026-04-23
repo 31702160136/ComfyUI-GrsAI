@@ -1,7 +1,7 @@
 [project]
-name = "ComfyUI-GrsAI"
-description = "GrsAI API node supports models: GPT Image (¥ 0.02), Nano Banana (¥ 0.022), Nano Banana Pro/Pro VT (imageSize 1K/2K/4K), Flux-Pro-1.1 (¥ 0.03), Flux-Ultra-1.1 (¥ 0.04), Flux Kontext Pro (¥ 0.035), Flux Kontext Max (¥ 0.07). Support text generated images, image generated images, and multi image fusion."
-version = "1.1.0"
+name = "ComfyUI-Grsai"
+description = "Grsai API node supports models: GPT Image 2 (¥ 0.03), Nano Banana 2(imageSize 1K/2K/4K)(¥ 0.06), Nano Banana Pro (imageSize 1K/2K/4K)(¥ 0.09), Nano Banana (imageSize 1K/2K/4K)(¥ 0.022). Support text generated images, image generated images, and multi image fusion."
+version = "1.1.1"
 license = { file = "LICENSE" }
 dependencies = [
     "requests",
