@@ -3,18 +3,16 @@ ComfyUI节点实现
 定义 GPT Image 图像生成节点（文生图 / 图生图 / 多图）
 """
 
-import os
-import tempfile
+import base64
+import io
 import logging
 from typing import Any, Tuple, Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import random
 
 import torch
 
 # 尝试相对导入，如果失败则使用绝对导入
 try:
-    from .upload import upload_file_zh
     from .api_client import GrsaiAPI, GrsaiAPIError
     from .config import default_config
     from .utils import (
@@ -23,7 +21,6 @@ try:
         tensor_to_pil,
     )
 except ImportError:
-    from upload import upload_file_zh
     from api_client import GrsaiAPI, GrsaiAPIError
     from config import default_config
     from utils import pil_to_tensor, format_error_message, tensor_to_pil
@@ -50,6 +47,102 @@ class SuppressFalLogs:
     def __exit__(self, exc_type, exc_val, exc_tb):
         for logger_name, original_level in self.original_levels.items():
             logging.getLogger(logger_name).setLevel(original_level)
+
+
+# gpt-image-2-vip 尺寸映射：显示标签 -> 实际发送给 API 的尺寸
+# 格式：尺寸 (比例, K等级)，支持 1K / 2K / 4K
+ASPECT_RATIO_VIP_MAP: Dict[str, str] = {
+    "auto": "auto",
+    # 1:1
+    "1024x1024 (1:1, 1K)": "1024x1024",
+    "2048x2048 (1:1, 2K)": "2048x2048",
+    "2880x2880 (1:1, 4K)": "2880x2880",
+    # 16:9
+    "1280x720 (16:9, 1K)": "1280x720",
+    "2048x1152 (16:9, 2K)": "2048x1152",
+    "3840x2160 (16:9, 4K)": "3840x2160",
+    # 9:16
+    "720x1280 (9:16, 1K)": "720x1280",
+    "1152x2048 (9:16, 2K)": "1152x2048",
+    "2160x3840 (9:16, 4K)": "2160x3840",
+    # 4:3
+    "1152x864 (4:3, 1K)": "1152x864",
+    "2304x1728 (4:3, 2K)": "2304x1728",
+    "3264x2448 (4:3, 4K)": "3264x2448",
+    # 3:4
+    "864x1152 (3:4, 1K)": "864x1152",
+    "1728x2304 (3:4, 2K)": "1728x2304",
+    "2448x3264 (3:4, 4K)": "2448x3264",
+    # 3:2
+    "1536x1024 (3:2, 1K)": "1536x1024",
+    "2048x1360 (3:2, 2K)": "2048x1360",
+    "3504x2336 (3:2, 4K)": "3504x2336",
+    # 2:3
+    "1024x1536 (2:3, 1K)": "1024x1536",
+    "1360x2048 (2:3, 2K)": "1360x2048",
+    "2336x3504 (2:3, 4K)": "2336x3504",
+    # 5:4
+    "1120x896 (5:4, 1K)": "1120x896",
+    "2240x1792 (5:4, 2K)": "2240x1792",
+    "3200x2560 (5:4, 4K)": "3200x2560",
+    # 4:5
+    "896x1120 (4:5, 1K)": "896x1120",
+    "1792x2240 (4:5, 2K)": "1792x2240",
+    "2560x3200 (4:5, 4K)": "2560x3200",
+    # 21:9
+    "1456x624 (21:9, 1K)": "1456x624",
+    "2912x1248 (21:9, 2K)": "2912x1248",
+    "3840x1648 (21:9, 4K)": "3840x1648",
+    # 9:21
+    "624x1456 (9:21, 1K)": "624x1456",
+    "1248x2912 (9:21, 2K)": "1248x2912",
+    "1648x3840 (9:21, 4K)": "1648x3840",
+    # 1:3
+    "688x2048 (1:3, 2K)": "688x2048",
+    "1280x3840 (1:3, 4K)": "1280x3840",
+    # 3:1
+    "2048x688 (3:1, 2K)": "2048x688",
+    "3840x1280 (3:1, 4K)": "3840x1280",
+    # 2:1
+    "1536x768 (2:1, 1K)": "1536x768",
+    "3072x1536 (2:1, 2K)": "3072x1536",
+    "3840x1920 (2:1, 4K)": "3840x1920",
+    # 1:2
+    "768x1536 (1:2, 1K)": "768x1536",
+    "1536x3072 (1:2, 2K)": "1536x3072",
+    "1920x3840 (1:2, 4K)": "1920x3840",
+}
+
+
+# gpt-image-2 尺寸映射：显示标签 -> 实际发送给 API 的尺寸
+ASPECT_RATIO_STD_MAP: Dict[str, str] = {
+    "auto": "auto",
+    "1024x1024 (1:1)": "1024x1024",
+    "1672x941 (16:9)": "1672x941",
+    "941x1672 (9:16)": "941x1672",
+    "1443x1090 (4:3)": "1443x1090",
+    "1090x1443 (3:4)": "1090x1443",
+    "1536x1024 (3:2)": "1536x1024",
+    "1024x1536 (2:3)": "1024x1536",
+    "1408x1120 (5:4)": "1408x1120",
+    "1120x1408 (4:5)": "1120x1408",
+    "1920x832 (21:9)": "1920x832",
+    "832x1920 (9:21)": "832x1920",
+    "1792x896 (2:1)": "1792x896",
+    "896x1792 (1:2)": "896x1792",
+}
+
+
+def _resolve_aspect_ratio(
+    label: Optional[str], mapping: Dict[str, str]
+) -> Optional[str]:
+    """将下拉显示标签转换为实际发送给 API 的尺寸值。
+
+    兼容旧值（直接传入纯尺寸字符串）以及 None。
+    """
+    if label is None:
+        return None
+    return mapping.get(label, label)
 
 
 class GrsaiGPTImageVIP_Node:
@@ -132,42 +225,7 @@ class GrsaiGPTImageVIP_Node:
             },
             "optional": {
                 "aspect_ratio": (
-                    [
-                        "auto",
-                        "1024x1024",
-                        "2048x2048",
-                        "2880x2880",
-                        "1536x1024",
-                        "2048x1360",
-                        "3504x2336",
-                        "1024x1536",
-                        "1360x2048",
-                        "2336x3504",
-                        "1448x1086",
-                        "2048x1632",
-                        "3200x2560",
-                        "1086x1448",
-                        "1632x2048",
-                        "2560x3200",
-                        "1774x887",
-                        "2048x1152",
-                        "3840x2160",
-                        "887x1774",
-                        "1152x2048",
-                        "2160x3840",
-                        "2048x880",
-                        "3840x1648",
-                        "880x2048",
-                        "1648x3840",
-                        "688x2048",
-                        "1280x3840",
-                        "2048x688",
-                        "3840x1280",
-                        "2048x1024",
-                        "3840x1920",
-                        "1024x2048",
-                        "1920x3840",
-                    ],
+                    list(ASPECT_RATIO_VIP_MAP.keys()),
                     {"default": "auto"},
                 ),
                 "image_1": ("IMAGE",),
@@ -206,7 +264,8 @@ class GrsaiGPTImageVIP_Node:
         prompt = kwargs.pop("prompt")
         model = kwargs.pop("model")
         apikey = kwargs.pop("apikey")
-        aspect_ratio = kwargs.pop("aspect_ratio", None)
+        aspect_ratio_label = kwargs.pop("aspect_ratio", None)
+        aspect_ratio = _resolve_aspect_ratio(aspect_ratio_label, ASPECT_RATIO_VIP_MAP)
         num_images = kwargs.pop("num_images", 1)
 
         # 收集可选输入图像
@@ -218,40 +277,29 @@ class GrsaiGPTImageVIP_Node:
         for i in range(1, 9):
             kwargs.pop(f"image_{i}", None)
 
-        uploaded_urls: List[str] = []
-        temp_files: List[str] = []
+        image_data_urls: List[str] = []
 
-        # 若提供了参考图，则上传获取URL
+        # 若提供了参考图，则将其转换为 base64 data URL
         if images_in:
             try:
-                for i, image_tensor in enumerate(images_in):
+                for image_tensor in images_in:
                     pil_images = tensor_to_pil(image_tensor)
                     if not pil_images:
                         continue
 
-                    with tempfile.NamedTemporaryFile(
-                        suffix=f"_{i}.png", delete=False
-                    ) as temp_file:
-                        pil_images[0].save(temp_file, "PNG")
-                        temp_files.append(temp_file.name)
+                    buffered = io.BytesIO()
+                    pil_images[0].save(buffered, format="PNG")
+                    b64_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                    image_data_urls.append(b64_str)
 
-                    with SuppressFalLogs():
-                        uploaded_urls.append(
-                            upload_file_zh(api_key=apikey, file_path=temp_files[-1])
-                        )
-
-                if not uploaded_urls:
+                if not image_data_urls:
                     return self._create_error_result(
-                        "All input images could not be processed or uploaded."
+                        "All input images could not be processed."
                     )
             except Exception as e:
                 return self._create_error_result(
-                    f"Image upload failed: {format_error_message(e)}"
+                    f"Image encoding failed: {format_error_message(e)}"
                 )
-            finally:
-                for path in temp_files:
-                    if os.path.exists(path):
-                        os.unlink(path)
 
         # 调用 GPT Image 接口
         try:
@@ -261,7 +309,7 @@ class GrsaiGPTImageVIP_Node:
                     final_prompt=prompt,
                     num_images=num_images,
                     model=model,
-                    urls=uploaded_urls,
+                    urls=image_data_urls,
                     aspect_ratio=aspect_ratio,
                 )
         except Exception as e:
@@ -279,7 +327,9 @@ class GrsaiGPTImageVIP_Node:
             return self._create_error_result(error_msg + detail)
 
         size_note = f" | aspectRatio: {aspect_ratio}" if aspect_ratio else ""
-        status = f"GPT Image | 模型: {model}{size_note} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
+        failed_count = max(0, num_images - len(pil_images))
+        fail_note = f" | 失败: {failed_count} 张" if failed_count > 0 else ""
+        status = f"GPT Image | 模型: {model}{size_note} | 参考图片: {len(image_data_urls)} 张 | 成功生成: {len(pil_images)} 张{fail_note}"
 
         return {
             "ui": {"string": [status]},
@@ -367,16 +417,7 @@ class GrsaiGPTImage_Node:
             },
             "optional": {
                 "aspect_ratio": (
-                    [
-                        "auto",
-                        "1024x1024",
-                        "1536x1024",
-                        "1024x1536",
-                        "1448x1086",
-                        "1086x1448",
-                        "1774x887",
-                        "887x1774",
-                    ],
+                    list(ASPECT_RATIO_STD_MAP.keys()),
                     {"default": "auto"},
                 ),
                 "image_1": ("IMAGE",),
@@ -415,7 +456,8 @@ class GrsaiGPTImage_Node:
         prompt = kwargs.pop("prompt")
         model = kwargs.pop("model")
         apikey = kwargs.pop("apikey")
-        aspect_ratio = kwargs.pop("aspect_ratio", None)
+        aspect_ratio_label = kwargs.pop("aspect_ratio", None)
+        aspect_ratio = _resolve_aspect_ratio(aspect_ratio_label, ASPECT_RATIO_STD_MAP)
         num_images = kwargs.pop("num_images", 1)
 
         # 收集可选输入图像
@@ -427,40 +469,29 @@ class GrsaiGPTImage_Node:
         for i in range(1, 9):
             kwargs.pop(f"image_{i}", None)
 
-        uploaded_urls: List[str] = []
-        temp_files: List[str] = []
+        image_data_urls: List[str] = []
 
-        # 若提供了参考图，则上传获取URL
+        # 若提供了参考图，则将其转换为 base64 data URL
         if images_in:
             try:
-                for i, image_tensor in enumerate(images_in):
+                for image_tensor in images_in:
                     pil_images = tensor_to_pil(image_tensor)
                     if not pil_images:
                         continue
 
-                    with tempfile.NamedTemporaryFile(
-                        suffix=f"_{i}.png", delete=False
-                    ) as temp_file:
-                        pil_images[0].save(temp_file, "PNG")
-                        temp_files.append(temp_file.name)
+                    buffered = io.BytesIO()
+                    pil_images[0].save(buffered, format="PNG")
+                    b64_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                    image_data_urls.append(b64_str)
 
-                    with SuppressFalLogs():
-                        uploaded_urls.append(
-                            upload_file_zh(api_key=apikey, file_path=temp_files[-1])
-                        )
-
-                if not uploaded_urls:
+                if not image_data_urls:
                     return self._create_error_result(
-                        "All input images could not be processed or uploaded."
+                        "All input images could not be processed."
                     )
             except Exception as e:
                 return self._create_error_result(
-                    f"Image upload failed: {format_error_message(e)}"
+                    f"Image encoding failed: {format_error_message(e)}"
                 )
-            finally:
-                for path in temp_files:
-                    if os.path.exists(path):
-                        os.unlink(path)
 
         # 调用 GPT Image 接口
         try:
@@ -470,7 +501,7 @@ class GrsaiGPTImage_Node:
                     final_prompt=prompt,
                     num_images=num_images,
                     model=model,
-                    urls=uploaded_urls,
+                    urls=image_data_urls,
                     aspect_ratio=aspect_ratio,
                 )
         except Exception as e:
@@ -488,7 +519,9 @@ class GrsaiGPTImage_Node:
             return self._create_error_result(error_msg + detail)
 
         size_note = f" | aspectRatio: {aspect_ratio}" if aspect_ratio else ""
-        status = f"GPT Image | 模型: {model}{size_note} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
+        failed_count = max(0, num_images - len(pil_images))
+        fail_note = f" | 失败: {failed_count} 张" if failed_count > 0 else ""
+        status = f"GPT Image | 模型: {model}{size_note} | 参考图片: {len(image_data_urls)} 张 | 成功生成: {len(pil_images)} 张{fail_note}"
 
         return {
             "ui": {"string": [status]},

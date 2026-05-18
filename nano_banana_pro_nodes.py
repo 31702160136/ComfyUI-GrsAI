@@ -3,18 +3,16 @@ ComfyUI节点实现
 定义 Nano Banana 图像生成节点（文生图 / 图生图 / 多图）
 """
 
-import os
-import tempfile
+import io
+import base64
 import logging
 from typing import Any, Tuple, Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import random
 
 import torch
 
 # 尝试相对导入，如果失败则使用绝对导入
 try:
-    from .upload import upload_file_zh
     from .api_client import GrsaiAPI, GrsaiAPIError
     from .config import default_config
     from .utils import (
@@ -23,7 +21,6 @@ try:
         tensor_to_pil,
     )
 except ImportError:
-    from upload import upload_file_zh
     from api_client import GrsaiAPI, GrsaiAPIError
     from config import default_config
     from utils import pil_to_tensor, format_error_message, tensor_to_pil
@@ -214,39 +211,32 @@ class GrsaiNanoBananaPro_Node:
             kwargs.pop(f"image_{i}", None)
 
         uploaded_urls: List[str] = []
-        temp_files: List[str] = []
 
-        # 若提供了参考图，则上传获取URL
+        # 若提供了参考图，则将图片转换为 base64 data URI
         if images_in:
             try:
-                for i, image_tensor in enumerate(images_in):
+                for image_tensor in images_in:
                     pil_images = tensor_to_pil(image_tensor)
                     if not pil_images:
                         continue
 
-                    with tempfile.NamedTemporaryFile(
-                        suffix=f"_{i}.png", delete=False
-                    ) as temp_file:
-                        pil_images[0].save(temp_file, "PNG")
-                        temp_files.append(temp_file.name)
+                    pil_image = pil_images[0]
+                    if pil_image.mode not in ("RGB", "RGBA"):
+                        pil_image = pil_image.convert("RGB")
 
-                    with SuppressFalLogs():
-                        uploaded_urls.append(
-                            upload_file_zh(api_key=apikey, file_path=temp_files[-1])
-                        )
+                    buffered = io.BytesIO()
+                    pil_image.save(buffered, format="PNG")
+                    b64_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                    uploaded_urls.append(b64_str)
 
                 if not uploaded_urls:
                     return self._create_error_result(
-                        "All input images could not be processed or uploaded."
+                        "All input images could not be processed."
                     )
             except Exception as e:
                 return self._create_error_result(
-                    f"Image upload failed: {format_error_message(e)}"
+                    f"Image encode failed: {format_error_message(e)}"
                 )
-            finally:
-                for path in temp_files:
-                    if os.path.exists(path):
-                        os.unlink(path)
 
         # 调用 Nano Banana 接口
         try:
@@ -275,7 +265,9 @@ class GrsaiNanoBananaPro_Node:
             return self._create_error_result(error_msg + detail)
 
         size_note = f" | imageSize: {image_size}" if image_size else ""
-        status = f"Nano Banana | 模型: {model}{size_note} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张"
+        failed_count = max(0, num_images - len(pil_images))
+        fail_note = f" | 失败: {failed_count} 张" if failed_count > 0 else ""
+        status = f"Nano Banana | 模型: {model}{size_note} | 参考图片: {len(uploaded_urls)} 张 | 成功生成: {len(pil_images)} 张{fail_note}"
 
         return {
             "ui": {"string": [status]},

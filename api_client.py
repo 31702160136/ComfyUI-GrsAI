@@ -159,7 +159,6 @@ class GrsaiAPI:
             "aspectRatio": aspect_ratio,
         }
 
-        print(json.dumps(payload, indent=4, ensure_ascii=False))
         print("🎨 开始生成图像...")
         # 发送请求
         try:
@@ -275,7 +274,6 @@ class GrsaiAPI:
                 )
             payload["aspectRatio"] = aspect_ratio
 
-        print(json.dumps(payload, indent=4, ensure_ascii=False))
         print("🍌 开始调用 Nano Banana 接口...")
         try:
             response = self._make_request("POST", "/v1/draw/nano-banana", data=payload)
@@ -371,7 +369,6 @@ class GrsaiAPI:
             if value is not None and value != "":
                 payload[key] = value
 
-        print(json.dumps(payload, indent=4, ensure_ascii=False))
         print("🎨 开始生成图像...")
         # 发送请求
         try:
