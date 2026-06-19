@@ -132,7 +132,7 @@ class GrsaiNanoBananaPro_Node:
                     ],
                     {"default": "nano-banana-pro"},
                 ),
-                "num_images": ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], {"default": 1}),
+                "num_images": ("INT", {"default": 1, "min": 1, "max": 12, "step": 1}),
             },
             "optional": {
                 "aspect_ratio": (
