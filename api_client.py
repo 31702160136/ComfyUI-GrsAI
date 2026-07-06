@@ -4,7 +4,6 @@ GrsAI API客户端
 """
 
 import json
-import time
 import requests
 from typing import Optional, Dict, Any, List, Tuple, TYPE_CHECKING
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -81,67 +80,53 @@ class GrsaiAPI:
         """
         url = f"{self.config.get_config('api_base_url')}{endpoint}"
         timeout = timeout or self.config.get_config("timeout", 300)
-        max_retries = self.config.get_config("max_retries", 3)
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}",
         }
 
-        for attempt in range(max_retries):
-            try:
-                if method.upper() == "POST":
-                    response = self.session.post(
-                        url, json=data, timeout=timeout, headers=headers
-                    )
+        try:
+            if method.upper() == "POST":
+                response = self.session.post(
+                    url, json=data, timeout=timeout, headers=headers
+                )
+            else:
+                response = self.session.get(url, timeout=timeout, headers=headers)
+
+            # 检查HTTP状态码
+            if response.status_code == 200:
+                json_data = ""
+                if response.text.startswith("data: "):
+                    json_data = response.text[6:]
                 else:
-                    response = self.session.get(url, timeout=timeout, headers=headers)
+                    json_data = response.text
+                # 打印response结果，字符串
+                result = json.loads(json_data)
+                return result
+            elif response.status_code == 401:
+                raise GrsaiAPIError("API密钥无效或已过期")
+            elif response.status_code == 429:
+                raise GrsaiAPIError("请求频率过高")
+            elif response.status_code >= 500:
+                raise GrsaiAPIError(f"服务器错误: {response.status_code}")
+            else:
+                error_msg = f"API请求失败: {response.status_code}"
+                try:
+                    error_data = response.json()
+                    if "error" in error_data:
+                        error_msg += f" - {error_data['error']}"
+                except:
+                    pass
+                raise GrsaiAPIError(error_msg)
 
-                # 检查HTTP状态码
-                if response.status_code == 200:
-                    json_data = ""
-                    if response.text.startswith("data: "):
-                        json_data = response.text[6:]
-                    else:
-                        json_data = response.text
-                    # 打印response结果，字符串
-                    result = json.loads(json_data)
-                    return result
-                elif response.status_code == 401:
-                    raise GrsaiAPIError("API密钥无效或已过期")
-                elif response.status_code == 429:
-                    raise GrsaiAPIError("请求频率过高，请稍后重试")
-                elif response.status_code >= 500:
-                    if attempt < max_retries - 1:
-                        time.sleep(2**attempt)  # 指数退避
-                        continue
-                    raise GrsaiAPIError(f"服务器错误: {response.status_code}")
-                else:
-                    error_msg = f"API请求失败: {response.status_code}"
-                    try:
-                        error_data = response.json()
-                        if "error" in error_data:
-                            error_msg += f" - {error_data['error']}"
-                    except:
-                        pass
-                    raise GrsaiAPIError(error_msg)
-
-            except requests.exceptions.Timeout:
-                if attempt < max_retries - 1:
-                    time.sleep(2**attempt)
-                    continue
-                raise GrsaiAPIError("请求超时，请检查网络连接")
-            except requests.exceptions.ConnectionError:
-                if attempt < max_retries - 1:
-                    time.sleep(2**attempt)
-                    continue
-                raise GrsaiAPIError("网络连接失败，请检查网络设置")
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    time.sleep(2**attempt)
-                    continue
-                raise GrsaiAPIError(format_error_message(e, "网络请求"))
-
-        raise GrsaiAPIError("达到最大重试次数，请求失败")
+        except requests.exceptions.Timeout:
+            raise GrsaiAPIError("请求超时，请检查网络连接")
+        except requests.exceptions.ConnectionError:
+            raise GrsaiAPIError("网络连接失败，请检查网络设置")
+        except GrsaiAPIError:
+            raise
+        except Exception as e:
+            raise GrsaiAPIError(format_error_message(e, "网络请求"))
 
     def gpt_image_generate_image(
         self,
@@ -434,7 +419,6 @@ class GrsaiAPI:
             "base_url": self.config.get_config("api_base_url"),
             "model": self.config.get_config("model"),
             "timeout": self.config.get_config("timeout"),
-            "max_retries": self.config.get_config("max_retries"),
         }
 
         # 测试连接

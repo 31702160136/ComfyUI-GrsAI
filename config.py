@@ -36,7 +36,6 @@ class GrsaiConfig:
         "safety_tolerance": 2,
         "prompt_upsampling": False,
         "timeout": 300,
-        "max_retries": 3,
     }
 
     # Flux 节点使用的宽高比选项

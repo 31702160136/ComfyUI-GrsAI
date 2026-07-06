@@ -28,7 +28,7 @@
 
 ## 4. API 客户端层（`api_client.py`）
 - `GrsaiAPI` 在构造时要求合法的 `sk-` 前缀密钥，复用 `requests.Session` 共享头信息。
-- `_make_request` 实现指数退避重试，针对 401/429/5xx/超时给出分支处理。
+- `_make_request` 只发送一次请求，针对 401/429/5xx/超时给出分支处理，失败时直接返回错误。
 - **Flux**：`flux_generate_image` 返回单图 `(PIL, url)`；支持种子、宽高比、安全容忍度、指导强度、步数等可选参数，最终统一下载校验 URL。
 - **GPT Image**：`gpt_image_generate_image` 返回多图列表；节点端可通过 `variants` 控制数量。
 - **Nano Banana**：`banana_generate_image` 自动兼容 `results` 与 `url` 两种返回格式，并并发下载。
