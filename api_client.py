@@ -79,7 +79,7 @@ class GrsaiAPI:
             GrsaiAPIError: API调用失败
         """
         url = f"{self.config.get_config('api_base_url')}{endpoint}"
-        timeout = timeout or self.config.get_config("timeout", 300)
+        timeout = 700
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}",
