@@ -132,7 +132,10 @@ class GrsaiNanoBananaPro_Node:
                     ],
                     {"default": "nano-banana-pro"},
                 ),
-                "num_images": ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], {"default": 1}),
+                "num_images": (
+                    ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+                    {"default": "1"},
+                ),
             },
             "optional": {
                 "aspect_ratio": (
@@ -199,7 +202,7 @@ class GrsaiNanoBananaPro_Node:
         apikey = kwargs.pop("apikey")
         aspect_ratio = kwargs.pop("aspect_ratio", None)
         image_size = kwargs.pop("image_size", "1K")
-        num_images = kwargs.pop("num_images", 1)
+        num_images = int(kwargs.pop("num_images", "1"))
 
         # 收集可选输入图像
         images_in: List[torch.Tensor] = [

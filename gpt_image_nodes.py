@@ -221,7 +221,10 @@ class GrsaiGPTImage_Node:
                     ],
                     {"default": "gpt-image-2"},
                 ),
-                "num_images": ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], {"default": 1}),
+                "num_images": (
+                    ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+                    {"default": "1"},
+                ),
             },
             "optional": {
                 "aspect_ratio": (
@@ -266,7 +269,7 @@ class GrsaiGPTImage_Node:
         apikey = kwargs.pop("apikey")
         aspect_ratio_label = kwargs.pop("aspect_ratio", None)
         aspect_ratio = _resolve_aspect_ratio(aspect_ratio_label, ASPECT_RATIO_STD_MAP)
-        num_images = kwargs.pop("num_images", 1)
+        num_images = int(kwargs.pop("num_images", "1"))
 
         # 收集可选输入图像
         images_in: List[torch.Tensor] = [
