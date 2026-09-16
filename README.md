@@ -1,3 +1,20 @@
+修改了一下gpt的几个节点，现在分成3个，一般用🎨 GrsAI GPT Image 2/2.5节点即可
+
+<img width="681" height="184" alt="image" src="https://github.com/user-attachments/assets/342d798c-57eb-4da5-b126-b72f7c865f59" />
+
+根据官网文档说明，引入透明背景与图片质量参数https://qmy27nhsd9.apifox.cn/452409160e0
+（我查的说2VIP是不支持透明图，是2支持，我就只在2中支持，其他没试了）
+
+比例与尺寸文档说明中有分开不同的情况，所以写成3个节点，有疑问先看看文档吧
+
+<img width="1589" height="750" alt="image" src="https://github.com/user-attachments/assets/3d3f6cf9-8baa-4710-9a06-815009f88ed5" />
+
+工作很忙，有问题可能有空会回答，如果这个节点有帮助到你，可以点个star支持，谢谢各位。
+
+
+以下是原文
+----------------------------------------------------
+
 # ComfyUI-GrsAI
 
 **强大的多模型图像生成** ComfyUI 自定义节点，使用GrsAI官方API，支持文生图、图生图、多图融合和批量生图。

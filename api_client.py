@@ -134,6 +134,9 @@ class GrsaiAPI:
         model: str = "gpt-image-2",
         aspect_ratio: Optional[str] = None,
         urls: List[str] = [],
+        background: Optional[str] = None,
+        output_format: Optional[str] = None,
+        quality: Optional[str] = None,
     ) -> Tuple[List["Image.Image"], List[str], List[str]]:
         # 构建请求数据
         payload = {
@@ -143,8 +146,14 @@ class GrsaiAPI:
             "shutProgress": True,
             "aspectRatio": aspect_ratio,
         }
+        if background:
+            payload["background"] = background
+        if output_format:
+            payload["output_format"] = output_format
+        if quality:
+            payload["quality"] = quality
 
-        print("🎨 开始生成图像...")
+        print(f"🎨 开始生成图像... model={model}")
         # 发送请求
         try:
             response = self._make_request("POST", "/v1/draw/completions", data=payload)

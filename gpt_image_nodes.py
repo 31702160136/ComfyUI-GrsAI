@@ -49,69 +49,126 @@ class SuppressFalLogs:
             logging.getLogger(logger_name).setLevel(original_level)
 
 
-# gpt-image-2-vip 尺寸映射：显示标签 -> 实际发送给 API 的尺寸
-# 格式：尺寸 (比例, K等级)，支持 1K / 2K / 4K
-ASPECT_RATIO_VIP_MAP: Dict[str, str] = {
-    "auto": "auto",
+# gpt-image-2.5 尺寸映射：比例 -> 图像等级(1K/2K/4K) -> 实际发送给 API 的尺寸
+GPT_IMAGE_ASPECT_RATIO_MAP: Dict[str, Dict[str, str]] = {
     # 1:1
-    "1024x1024 (1:1, 1K)": "1024x1024",
-    "2048x2048 (1:1, 2K)": "2048x2048",
-    "2880x2880 (1:1, 4K)": "2880x2880",
+    "1:1": {
+        "1K": "1024x1024",
+        "2K": "2048x2048",
+        "4K": "2880x2880",
+    },
     # 16:9
-    "1280x720 (16:9, 1K)": "1280x720",
-    "2048x1152 (16:9, 2K)": "2048x1152",
-    "3840x2160 (16:9, 4K)": "3840x2160",
+    "16:9": {
+        "1K": "1280x720",
+        "2K": "2048x1152",
+        "4K": "3840x2160",
+    },
     # 9:16
-    "720x1280 (9:16, 1K)": "720x1280",
-    "1152x2048 (9:16, 2K)": "1152x2048",
-    "2160x3840 (9:16, 4K)": "2160x3840",
+    "9:16": {
+        "1K": "720x1280",
+        "2K": "1152x2048",
+        "4K": "2160x3840",
+    },
     # 4:3
-    "1152x864 (4:3, 1K)": "1152x864",
-    "2304x1728 (4:3, 2K)": "2304x1728",
-    "3264x2448 (4:3, 4K)": "3264x2448",
+    "4:3": {
+        "1K": "1152x864",
+        "2K": "2304x1728",
+        "4K": "3264x2448",
+    },
     # 3:4
-    "864x1152 (3:4, 1K)": "864x1152",
-    "1728x2304 (3:4, 2K)": "1728x2304",
-    "2448x3264 (3:4, 4K)": "2448x3264",
+    "3:4": {
+        "1K": "864x1152",
+        "2K": "1728x2304",
+        "4K": "2448x3264",
+    },
     # 3:2
-    "1536x1024 (3:2, 1K)": "1536x1024",
-    "2048x1360 (3:2, 2K)": "2048x1360",
-    "3504x2336 (3:2, 4K)": "3504x2336",
+    "3:2": {
+        "1K": "1536x1024",
+        "2K": "2048x1360",
+        "4K": "3504x2336",
+    },
     # 2:3
-    "1024x1536 (2:3, 1K)": "1024x1536",
-    "1360x2048 (2:3, 2K)": "1360x2048",
-    "2336x3504 (2:3, 4K)": "2336x3504",
+    "2:3": {
+        "1K": "1024x1536",
+        "2K": "1360x2048",
+        "4K": "2336x3504",
+    },
     # 5:4
-    "1120x896 (5:4, 1K)": "1120x896",
-    "2240x1792 (5:4, 2K)": "2240x1792",
-    "3200x2560 (5:4, 4K)": "3200x2560",
+    "5:4": {
+        "1K": "1120x896",
+        "2K": "2240x1792",
+        "4K": "3200x2560",
+    },
     # 4:5
-    "896x1120 (4:5, 1K)": "896x1120",
-    "1792x2240 (4:5, 2K)": "1792x2240",
-    "2560x3200 (4:5, 4K)": "2560x3200",
+    "4:5": {
+        "1K": "896x1120",
+        "2K": "1792x2240",
+        "4K": "2560x3200",
+    },
     # 21:9
-    "1456x624 (21:9, 1K)": "1456x624",
-    "2912x1248 (21:9, 2K)": "2912x1248",
-    "3840x1648 (21:9, 4K)": "3840x1648",
+    "21:9": {
+        "1K": "1456x624",
+        "2K": "2912x1248",
+        "4K": "3840x1648",
+    },
     # 9:21
-    "624x1456 (9:21, 1K)": "624x1456",
-    "1248x2912 (9:21, 2K)": "1248x2912",
-    "1648x3840 (9:21, 4K)": "1648x3840",
+    "9:21": {
+        "1K": "624x1456",
+        "2K": "1248x2912",
+        "4K": "1648x3840",
+    },
     # 1:3
-    "688x2048 (1:3, 2K)": "688x2048",
-    "1280x3840 (1:3, 4K)": "1280x3840",
+    "1:3": {
+        "2K": "688x2048",
+        "4K": "1280x3840",
+    },
     # 3:1
-    "2048x688 (3:1, 2K)": "2048x688",
-    "3840x1280 (3:1, 4K)": "3840x1280",
+    "3:1": {
+        "2K": "2048x688",
+        "4K": "3840x1280",
+    },
     # 2:1
-    "1536x768 (2:1, 1K)": "1536x768",
-    "3072x1536 (2:1, 2K)": "3072x1536",
-    "3840x1920 (2:1, 4K)": "3840x1920",
+    "2:1": {
+        "1K": "1536x768",
+        "2K": "3072x1536",
+        "4K": "3840x1920",
+    },
     # 1:2
-    "768x1536 (1:2, 1K)": "768x1536",
-    "1536x3072 (1:2, 2K)": "1536x3072",
-    "1920x3840 (1:2, 4K)": "1920x3840",
+    "1:2": {
+        "1K": "768x1536",
+        "2K": "1536x3072",
+        "4K": "1920x3840",
+    },
 }
+
+# gpt-image-2 / gpt-image-2.5 支持的比例（仅 1K 像素值）
+GPT_IMAGE_NON_VIP_RATIOS: Dict[str, str] = {
+    "1:1": "1024x1024",
+    "16:9": "1672x941",
+    "9:16": "941x1672",
+    "4:3": "1443x1090",
+    "3:4": "1090x1443",
+    "3:2": "1536x1024",
+    "2:3": "1024x1536",
+    "5:4": "1408x1120",
+    "4:5": "1120x1408",
+    "21:9": "1920x832",
+    "9:21": "832x1920",
+    "1:2": "896x1792",
+    "2:1": "1792x896",
+}
+
+# gpt-image-2 / gpt-image-2.5 节点的比例下拉选项：比例（长*高）
+GPT_IMAGE_NON_VIP_ASPECT_RATIO_OPTIONS: List[str] = ["auto"] + [
+    f"{ratio}（{pixels}）" for ratio, pixels in GPT_IMAGE_NON_VIP_RATIOS.items()
+]
+
+# vip 模型的比例下拉选项
+GPT_IMAGE_VIP_ASPECT_RATIO_OPTIONS: List[str] = ["auto"] + list(
+    GPT_IMAGE_ASPECT_RATIO_MAP.keys()
+)
+
+GPT_IMAGE_SIZE_OPTIONS: List[str] = ["1K", "2K", "4K"]
 
 
 # gpt-image-2 尺寸映射：显示标签 -> 实际发送给 API 的尺寸
@@ -133,25 +190,28 @@ ASPECT_RATIO_STD_MAP: Dict[str, str] = {
 }
 
 
-def _resolve_aspect_ratio(
-    label: Optional[str], mapping: Dict[str, str]
-) -> Optional[str]:
-    """将下拉显示标签转换为实际发送给 API 的尺寸值。
-
-    兼容旧值（直接传入纯尺寸字符串）以及 None。
-    """
-    if label is None:
-        return None
-    return mapping.get(label, label)
-
-
 class GrsaiGPTImage_Node:
     """
-    GPT Image 图像生成节点
+    GPT Image 图像生成节点（gpt-image-2 / gpt-image-2.5）
     """
 
     FUNCTION = "execute"
     CATEGORY = "GrsAI/GPT Image"
+
+    MODELS: List[str] = ["gpt-image-2", "gpt-image-2.5"]
+    DEFAULT_MODEL: str = "gpt-image-2"
+    HAS_ASPECT_RATIO: bool = True
+    HAS_IMAGE_SIZE: bool = False
+    VIP: bool = False
+    ASPECT_RATIO_OPTIONS: List[str] = GPT_IMAGE_NON_VIP_ASPECT_RATIO_OPTIONS
+    DEFAULT_ASPECT_RATIO: str = "auto"
+    # 无 aspect_ratio 选项的节点，按该比例取对应 image_size 的像素值
+    NO_RATIO_DEFAULT: str = "1:1"
+    BACKGROUND_OPTIONS: Optional[List[str]] = ["否", "是（2.5不支持，别选）"]
+    DEFAULT_BACKGROUND: str = "否"
+    QUALITY_OPTIONS: Optional[List[str]] = None
+    QUALITY_VALUE_MAP: Dict[str, str] = {}
+    DEFAULT_QUALITY: str = "auto"
 
     def _execute_generation(
         self,
@@ -205,7 +265,7 @@ class GrsaiGPTImage_Node:
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {
+        inputs = {
             "required": {
                 "prompt": (
                     "STRING",
@@ -216,10 +276,8 @@ class GrsaiGPTImage_Node:
                 ),
                 "apikey": ("STRING", {"default": "请输入您的APIKEY: sk-xxxxxxx"}),
                 "model": (
-                    [
-                        "gpt-image-2",
-                    ],
-                    {"default": "gpt-image-2"},
+                    cls.MODELS,
+                    {"default": cls.DEFAULT_MODEL},
                 ),
                 "num_images": (
                     ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
@@ -227,10 +285,6 @@ class GrsaiGPTImage_Node:
                 ),
             },
             "optional": {
-                "aspect_ratio": (
-                    list(ASPECT_RATIO_STD_MAP.keys()),
-                    {"default": "auto"},
-                ),
                 "image_1": ("IMAGE",),
                 "image_2": ("IMAGE",),
                 "image_3": ("IMAGE",),
@@ -241,6 +295,27 @@ class GrsaiGPTImage_Node:
                 "image_8": ("IMAGE",),
             },
         }
+        if cls.HAS_ASPECT_RATIO:
+            inputs["optional"]["aspect_ratio"] = (
+                cls.ASPECT_RATIO_OPTIONS,
+                {"default": cls.DEFAULT_ASPECT_RATIO},
+            )
+        if cls.HAS_IMAGE_SIZE:
+            inputs["optional"]["image_size"] = (
+                GPT_IMAGE_SIZE_OPTIONS,
+                {"default": "1K"},
+            )
+        if cls.BACKGROUND_OPTIONS:
+            inputs["optional"]["透明背景"] = (
+                cls.BACKGROUND_OPTIONS,
+                {"default": cls.DEFAULT_BACKGROUND},
+            )
+        if cls.QUALITY_OPTIONS:
+            inputs["optional"]["quality"] = (
+                cls.QUALITY_OPTIONS,
+                {"default": cls.DEFAULT_QUALITY},
+            )
+        return inputs
 
     RETURN_TYPES = ("IMAGE", "STRING")
     RETURN_NAMES = ("image", "status")
@@ -263,13 +338,48 @@ class GrsaiGPTImage_Node:
             "result": (image_out, f"失败: {error_message}"),
         }
 
+    def _resolve_aspect_ratio(
+        self, label: Optional[str], image_size: str
+    ) -> Optional[str]:
+        """将比例下拉值转换为实际发送给 API 的尺寸值。"""
+        if not self.HAS_ASPECT_RATIO:
+            sizes = GPT_IMAGE_ASPECT_RATIO_MAP.get(self.NO_RATIO_DEFAULT)
+            if sizes:
+                return sizes.get(image_size) or next(iter(sizes.values()))
+            return "auto"
+        if label is None or label == "auto":
+            return "auto"
+        # 兼容旧工作流中已保存的 “1024x1024 (1:1)” 标签
+        if label in ASPECT_RATIO_STD_MAP:
+            return ASPECT_RATIO_STD_MAP[label]
+        if not self.VIP:
+            # 下拉格式：比例（长*高），发送括号内的 1K 像素值
+            if "（" in label:
+                return label.split("（", 1)[1].rstrip("）").strip()
+            return label
+        sizes = GPT_IMAGE_ASPECT_RATIO_MAP.get(label)
+        if sizes:
+            return sizes.get(image_size) or next(iter(sizes.values()))
+        return label
+
     def execute(self, **kwargs):
         prompt = kwargs.pop("prompt")
         model = kwargs.pop("model")
         apikey = kwargs.pop("apikey")
-        aspect_ratio_label = kwargs.pop("aspect_ratio", None)
-        aspect_ratio = _resolve_aspect_ratio(aspect_ratio_label, ASPECT_RATIO_STD_MAP)
+        aspect_ratio_label = kwargs.pop("aspect_ratio", "auto")
+        image_size = kwargs.pop("image_size", "1K")
+        background = kwargs.pop("透明背景", "否")
+        quality = kwargs.pop("quality", None)
+        aspect_ratio = self._resolve_aspect_ratio(aspect_ratio_label, image_size)
         num_images = int(kwargs.pop("num_images", "1"))
+
+        extra_params = {}
+        if background != "否":
+            extra_params["background"] = "transparent"
+            extra_params["output_format"] = "png"
+        if quality:
+            quality = self.QUALITY_VALUE_MAP.get(quality, quality)
+            extra_params["quality"] = quality
 
         # 收集可选输入图像
         images_in: List[torch.Tensor] = [
@@ -314,6 +424,7 @@ class GrsaiGPTImage_Node:
                     model=model,
                     urls=image_data_urls,
                     aspect_ratio=aspect_ratio,
+                    **extra_params,
                 )
         except Exception as e:
             return self._create_error_result(
@@ -329,7 +440,11 @@ class GrsaiGPTImage_Node:
             detail = f"; {errors}" if errors else ""
             return self._create_error_result(error_msg + detail)
 
-        size_note = f" | aspectRatio: {aspect_ratio}" if aspect_ratio else ""
+        size_note = ""
+        if aspect_ratio:
+            size_note = f" | aspectRatio: {aspect_ratio}"
+            if self.HAS_IMAGE_SIZE:
+                size_note += f" | imageSize: {image_size}"
         failed_count = max(0, num_images - len(pil_images))
         fail_note = f" | 失败: {failed_count} 张" if failed_count > 0 else ""
         status = f"GPT Image | 模型: {model}{size_note} | 参考图片: {len(image_data_urls)} 张 | 成功生成: {len(pil_images)} 张{fail_note}"
@@ -340,10 +455,49 @@ class GrsaiGPTImage_Node:
         }
 
 
+class GrsaiGPTImageFlareSunburst_Node(GrsaiGPTImage_Node):
+    """GPT Image 2.5 flare / sunburst 节点"""
+
+    MODELS = ["gpt-image-2.5-flare", "gpt-image-2.5-sunburst"]
+    DEFAULT_MODEL = "gpt-image-2.5-flare"
+    HAS_ASPECT_RATIO = False
+    HAS_IMAGE_SIZE = True
+    VIP = True
+    BACKGROUND_OPTIONS = ["否", "是"]
+    QUALITY_OPTIONS = [
+        "auto",
+        "low",
+        "medium",
+        "high",
+        "xhigh（sunburst可用）",
+        "max（sunburst可用）",
+    ]
+    QUALITY_VALUE_MAP = {
+        "xhigh（sunburst可用）": "xhigh",
+        "max（sunburst可用）": "max",
+    }
+
+
+class GrsaiGPTImageVIP_Node(GrsaiGPTImage_Node):
+    """GPT Image 2 VIP 节点"""
+
+    MODELS = ["gpt-image-2-vip"]
+    DEFAULT_MODEL = "gpt-image-2-vip"
+    HAS_ASPECT_RATIO = True
+    HAS_IMAGE_SIZE = True
+    VIP = True
+    ASPECT_RATIO_OPTIONS = GPT_IMAGE_VIP_ASPECT_RATIO_OPTIONS
+    BACKGROUND_OPTIONS = None
+
+
 NODE_CLASS_MAPPINGS = {
     "Grsai_GPTImage": GrsaiGPTImage_Node,
+    "Grsai_GPTImageFlareSunburst": GrsaiGPTImageFlareSunburst_Node,
+    "Grsai_GPTImageVIP": GrsaiGPTImageVIP_Node,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Grsai_GPTImage": "🎨 GrsAI GPT Image",
+    "Grsai_GPTImage": "🎨 GrsAI GPT Image 2/2.5",
+    "Grsai_GPTImageFlareSunburst": "🎨 GrsAI GPT Image 2.5 flare/sunburst",
+    "Grsai_GPTImageVIP": "🎨 GrsAI GPT Image 2 VIP",
 }
