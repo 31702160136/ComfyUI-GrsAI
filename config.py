@@ -35,6 +35,9 @@ class GrsaiConfig:
         "output_format": "jpeg",
         "safety_tolerance": 2,
         "prompt_upsampling": False,
+        "request_timeout": 60,
+        "generation_timeout": 900,
+        "poll_interval": 2.0,
         "timeout": 300,
     }
 
@@ -64,6 +67,10 @@ class GrsaiConfig:
         "5:4",
         "4:5",
         "21:9",
+        "4:1",
+        "1:4",
+        "8:1",
+        "1:8",
     ]
 
     # Nano Banana 模型列表
@@ -73,17 +80,25 @@ class GrsaiConfig:
         "nano-banana-pro",
         "nano-banana-pro-vt",
         "nano-banana-pro-cl",
+        "nano-banana-pro-vip",
+        "nano-banana-pro-4k-vip",
+        "nano-banana-2",
         "nano-banana-2-cl",
-        "nano-banana-2-cl-4k",
+        "nano-banana-2-2k-cl",
+        "nano-banana-2-4k-cl",
     ]
 
     # 支持 imageSize 参数的 Nano Banana 模型
     NANO_BANANA_MODELS_SUPPORTING_IMAGE_SIZE = [
+        "nano-banana-2",
+        "nano-banana-2-cl",
+        "nano-banana-2-2k-cl",
+        "nano-banana-2-4k-cl",
         "nano-banana-pro",
         "nano-banana-pro-vt",
         "nano-banana-pro-cl",
-        "nano-banana-2",
-        "nano-banana-2-cl",
+        "nano-banana-pro-vip",
+        "nano-banana-pro-4k-vip",
     ]
 
     # Nano Banana PRO / PRO-VT 支持的输出尺寸

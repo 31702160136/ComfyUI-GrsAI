@@ -15,6 +15,7 @@ try:
     from .api_client import GrsaiAPI, GrsaiAPIError
     from .config import default_config
     from .utils import (
+        create_generation_failed_image,
         pil_to_tensor,
         format_error_message,
         tensor_to_base64,
@@ -22,7 +23,12 @@ try:
 except ImportError:
     from api_client import GrsaiAPI, GrsaiAPIError
     from config import default_config
-    from utils import pil_to_tensor, format_error_message, tensor_to_base64
+    from utils import (
+        create_generation_failed_image,
+        pil_to_tensor,
+        format_error_message,
+        tensor_to_base64,
+    )
 
 
 class SuppressFalLogs:
@@ -67,10 +73,13 @@ class GrsaiNanoBanana2_Node:
         aspect_ratio: str = "auto",
         image_size: str = "1K",
         **kwargs,
-    ) -> Tuple[List[Any], List[str], List[str]]:
-        results_pil, result_urls, errors = [], [], []
+    ) -> Tuple[List[Any], List[str], List[str], List[str]]:
+        task_results: Dict[
+            int, Tuple[List[Any], List[str], List[str], List[str]]
+        ] = {}
 
         def generate_single_image():
+            api_client = None
             try:
                 api_client = GrsaiAPI(api_key=grsai_api_key)
                 api_params = {
@@ -84,30 +93,79 @@ class GrsaiNanoBanana2_Node:
                 pil_imgs, img_urls, errs = api_client.banana_generate_image(
                     **api_params
                 )
-                return pil_imgs, img_urls, errs
+                return pil_imgs, img_urls, errs, api_client.last_task_id
             except Exception as e:
+                if api_client is not None and api_client.last_task_id:
+                    setattr(e, "task_id", api_client.last_task_id)
                 return e
 
         with ThreadPoolExecutor(max_workers=num_images) as executor:
-            future_to_seed = {
-                executor.submit(generate_single_image): s for s in range(num_images)
+            future_to_index = {
+                executor.submit(generate_single_image): index
+                for index in range(num_images)
             }
 
-            for future in as_completed(future_to_seed):
+            for future in as_completed(future_to_index):
+                task_index = future_to_index[future]
                 try:
                     result = future.result()
                     if isinstance(result, Exception):
-                        # 简化错误信息，不显示技术细节
-                        errors.append(f"图像生成失败")
+                        task_id = getattr(result, "task_id", None)
+                        display_task_id = task_id or "未创建（请求未提交）"
+                        task_note = f" [接口任务ID: {display_task_id}]"
+                        error = (
+                            f"批量任务 {task_index + 1} 生成失败: "
+                            f"{result}{task_note}"
+                        )
+                        print(f"❌ {error}")
+                        task_results[task_index] = (
+                            [create_generation_failed_image(error_message=error)],
+                            [],
+                            [error],
+                            [task_id or "未创建"],
+                        )
                     else:
-                        pil_imgs, img_urls, errs = result
-                        results_pil.extend(pil_imgs)
-                        result_urls.extend(img_urls)
-                        errors.extend(errs)
+                        pil_imgs, img_urls, errs, task_id = result
+                        task_ids = [task_id or "未创建"]
+                        if pil_imgs:
+                            task_results[task_index] = (
+                                pil_imgs,
+                                img_urls,
+                                errs,
+                                task_ids,
+                            )
+                        else:
+                            error = "; ".join(errs) or "未返回可用图片"
+                            print(f"❌ 批量任务 {task_index + 1} 生成失败: {error}")
+                            task_results[task_index] = (
+                                [create_generation_failed_image(error_message=error)],
+                                [],
+                                [error],
+                                task_ids,
+                            )
                 except Exception as exc:
-                    errors.append(f"图像生成异常")
+                    task_id = getattr(exc, "task_id", None)
+                    display_task_id = task_id or "未创建（请求未提交）"
+                    error = (
+                        f"批量任务 {task_index + 1} 生成异常: {exc} "
+                        f"[接口任务ID: {display_task_id}]"
+                    )
+                    print(f"❌ {error}")
+                    task_results[task_index] = (
+                        [create_generation_failed_image(error_message=error)],
+                        [],
+                        [error],
+                        [task_id or "未创建"],
+                    )
 
-        return results_pil, result_urls, errors
+        results_pil, result_urls, errors, task_ids = [], [], [], []
+        for task_index in range(num_images):
+            pil_imgs, img_urls, task_errors, current_task_ids = task_results[task_index]
+            results_pil.extend(pil_imgs)
+            result_urls.extend(img_urls)
+            errors.extend(task_errors)
+            task_ids.extend(current_task_ids)
+        return results_pil, result_urls, errors, task_ids
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -125,7 +183,8 @@ class GrsaiNanoBanana2_Node:
                     [
                         "nano-banana-2",
                         "nano-banana-2-cl",
-                        "nano-banana-2-cl-4k",
+                        "nano-banana-2-2k-cl",
+                        "nano-banana-2-4k-cl",
                     ],
                     {"default": "nano-banana-2"},
                 ),
@@ -176,8 +235,8 @@ class GrsaiNanoBanana2_Node:
             },
         }
 
-    RETURN_TYPES = ("IMAGE", "STRING")
-    RETURN_NAMES = ("image", "status")
+    RETURN_TYPES = ("IMAGE", "STRING", "STRING")
+    RETURN_NAMES = ("image", "status", "api_task_ids")
 
     @classmethod
     def IS_CHANGED(s, **kwargs):
@@ -186,15 +245,23 @@ class GrsaiNanoBanana2_Node:
     def _create_error_result(
         self, error_message: str, original_image: Optional[torch.Tensor] = None
     ) -> Dict[str, Any]:
-        print(f"节点执行错误: {error_message}")
+        full_error_message = (
+            f"{error_message}\n接口任务ID: 未创建（请求未成功提交）"
+        )
+        print(f"节点执行错误: {full_error_message}")
         if original_image is not None:
-            image_out = original_image
+            height, width = original_image.shape[1:3]
         else:
-            image_out = torch.zeros((1, 1, 1, 3), dtype=torch.float32)
+            width = height = 1024
+        image_out = pil_to_tensor(
+            create_generation_failed_image(
+                width=width, height=height, error_message=full_error_message
+            )
+        )
 
         return {
-            "ui": {"string": [error_message]},
-            "result": (image_out, f"失败: {error_message}"),
+            "ui": {"string": [full_error_message]},
+            "result": (image_out, f"失败: {full_error_message}", "未创建"),
         }
 
     def execute(self, **kwargs):
@@ -237,7 +304,7 @@ class GrsaiNanoBanana2_Node:
         # 调用 Nano Banana 接口
         try:
             with SuppressFalLogs():
-                pil_images, image_urls, errors = self._execute_generation(
+                pil_images, image_urls, errors, task_ids = self._execute_generation(
                     grsai_api_key=apikey,
                     final_prompt=prompt,
                     num_images=num_images,
@@ -261,13 +328,16 @@ class GrsaiNanoBanana2_Node:
             return self._create_error_result(error_msg + detail)
 
         size_note = f" | imageSize: {image_size}" if image_size else ""
-        failed_count = max(0, num_images - len(pil_images))
+        success_count = min(num_images, len(image_urls))
+        failed_count = max(0, num_images - success_count)
         fail_note = f" | 失败: {failed_count} 张" if failed_count > 0 else ""
-        status = f"Nano Banana | 模型: {model}{size_note} | 参考图片: {len(image_data_uris)} 张 | 成功生成: {len(pil_images)} 张{fail_note}"
+        task_ids_text = "\n".join(task_ids)
+        task_note = f" | 接口任务ID: {', '.join(task_ids)}" if task_ids else ""
+        status = f"Nano Banana | 模型: {model}{size_note} | 参考图片: {len(image_data_uris)} 张 | 成功生成: {success_count} 张{fail_note}{task_note}"
 
         return {
             "ui": {"string": [status]},
-            "result": (pil_to_tensor(pil_images), status),
+            "result": (pil_to_tensor(pil_images), status, task_ids_text),
         }
 
 

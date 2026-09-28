@@ -6,7 +6,7 @@
 import io
 import requests
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from typing import Optional, Union, List, Tuple
 import torch
 import re
@@ -36,6 +36,192 @@ def download_image(url: str, timeout: int = 30) -> Optional[Image.Image]:
     except Exception as e:
         print(f"图像下载失败，错误: {str(e)}")
         return None
+
+
+def _load_preview_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
+    """加载跨平台、尽可能支持中文的预览字体。"""
+    font_names = (
+        [
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/STHeiti Medium.ttc",
+            "/Library/Fonts/Arial Unicode.ttf",
+            "C:/Windows/Fonts/msyhbd.ttc",
+            "C:/Windows/Fonts/msyh.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        ]
+        if bold
+        else [
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/STHeiti Light.ttc",
+            "/Library/Fonts/Arial Unicode.ttf",
+            "C:/Windows/Fonts/msyh.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        ]
+    )
+    fallback_names = (
+        ["Arial Bold.ttf", "DejaVuSans-Bold.ttf"]
+        if bold
+        else ["Arial.ttf", "DejaVuSans.ttf"]
+    )
+    for font_name in [*font_names, *fallback_names]:
+        try:
+            return ImageFont.truetype(font_name, size=size)
+        except (OSError, ValueError):
+            continue
+
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
+
+
+def _wrap_preview_text(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    font: ImageFont.ImageFont,
+    max_width: int,
+    max_lines: int,
+) -> List[str]:
+    """按实际像素宽度换行，长错误文本会截断并显示省略号。"""
+    normalized = re.sub(r"\s+", " ", str(text)).strip()
+    if not normalized:
+        return ["未提供具体错误信息"]
+
+    lines: List[str] = []
+    current = ""
+    truncated = False
+    for char in normalized:
+        candidate = current + char
+        box = draw.textbbox((0, 0), candidate, font=font)
+        if current and box[2] - box[0] > max_width:
+            lines.append(current.rstrip())
+            current = char.lstrip()
+            if len(lines) == max_lines:
+                truncated = True
+                break
+        else:
+            current = candidate
+
+    if len(lines) < max_lines and current:
+        lines.append(current.rstrip())
+
+    if truncated and lines:
+        ellipsis = "…"
+        last_line = lines[-1]
+        while last_line:
+            candidate = last_line.rstrip() + ellipsis
+            box = draw.textbbox((0, 0), candidate, font=font)
+            if box[2] - box[0] <= max_width:
+                lines[-1] = candidate
+                break
+            last_line = last_line[:-1]
+        if not last_line:
+            lines[-1] = ellipsis
+
+    return lines
+
+
+def create_generation_failed_image(
+    width: int = 1024,
+    height: int = 1024,
+    error_message: str = "",
+) -> Image.Image:
+    """创建包含实际失败原因、适合在 ComfyUI 中预览的提示图。"""
+    width = max(320, int(width))
+    height = max(320, int(height))
+    image = Image.new("RGB", (width, height), (35, 24, 24))
+    draw = ImageDraw.Draw(image)
+    margin = max(24, min(width, height) // 12)
+    line_width = max(8, min(width, height) // 80)
+    red = (220, 68, 68)
+
+    draw.rounded_rectangle(
+        (margin, margin, width - margin, height - margin),
+        radius=max(16, margin // 2),
+        outline=red,
+        width=line_width,
+    )
+
+    center_x = width // 2
+    cross_center_y = margin + max(72, min(width, height) // 7)
+    cross_size = max(38, min(width, height) // 13)
+    draw.line(
+        (
+            center_x - cross_size,
+            cross_center_y - cross_size,
+            center_x + cross_size,
+            cross_center_y + cross_size,
+        ),
+        fill=red,
+        width=line_width * 2,
+    )
+    draw.line(
+        (
+            center_x + cross_size,
+            cross_center_y - cross_size,
+            center_x - cross_size,
+            cross_center_y + cross_size,
+        ),
+        fill=red,
+        width=line_width * 2,
+    )
+
+    scale = min(width, height) / 1024
+    title_font = _load_preview_font(max(32, round(54 * scale)), bold=True)
+    label_font = _load_preview_font(max(26, round(36 * scale)), bold=True)
+    reason_font = _load_preview_font(max(24, round(32 * scale)))
+
+    title = "生成失败 / GENERATION FAILED"
+    title_box = draw.textbbox((0, 0), title, font=title_font)
+    if title_box[2] - title_box[0] > width - 2 * margin:
+        title = "GENERATION FAILED"
+        title_box = draw.textbbox((0, 0), title, font=title_font)
+    if title_box[2] - title_box[0] > width - 2 * margin:
+        title = "FAILED"
+        title_box = draw.textbbox((0, 0), title, font=title_font)
+    title_y = cross_center_y + cross_size + max(28, round(34 * scale))
+    draw.text(
+        ((width - (title_box[2] - title_box[0])) // 2, title_y),
+        title,
+        fill=(255, 225, 225),
+        font=title_font,
+    )
+
+    content_left = margin + max(24, round(28 * scale))
+    content_width = width - 2 * content_left
+    label_y = title_y + (title_box[3] - title_box[1]) + max(34, round(48 * scale))
+    draw.text(
+        (content_left, label_y),
+        "失败原因：",
+        fill=(245, 170, 170),
+        font=label_font,
+    )
+
+    label_box = draw.textbbox((0, 0), "失败原因：", font=label_font)
+    reason_y = label_y + (label_box[3] - label_box[1]) + max(16, round(20 * scale))
+    line_spacing = max(10, round(12 * scale))
+    line_box = draw.textbbox((0, 0), "Ag中文", font=reason_font)
+    line_height = max(1, line_box[3] - line_box[1]) + line_spacing
+    available_height = max(line_height, height - margin - reason_y)
+    max_lines = max(1, available_height // line_height)
+    reason_lines = _wrap_preview_text(
+        draw,
+        error_message or "图像生成失败，服务未提供具体错误信息",
+        reason_font,
+        content_width,
+        max_lines,
+    )
+    draw.multiline_text(
+        (content_left, reason_y),
+        "\n".join(reason_lines),
+        fill=(245, 225, 225),
+        font=reason_font,
+        spacing=line_spacing,
+    )
+    return image
 
 
 def tensor_to_pil(tensor: torch.Tensor) -> List[Image.Image]:
