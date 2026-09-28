@@ -36,7 +36,7 @@ class GrsaiConfig:
         "safety_tolerance": 2,
         "prompt_upsampling": False,
         "request_timeout": 60,
-        "generation_timeout": 900,
+        "generation_timeout": 3600,
         "poll_interval": 2.0,
         "timeout": 300,
     }
