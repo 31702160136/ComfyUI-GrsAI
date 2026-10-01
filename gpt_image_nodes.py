@@ -168,7 +168,7 @@ class GrsaiGPTImage_Node:
     """
 
     FUNCTION = "execute"
-    CATEGORY = "GrsAI/GPT Image"
+    CATEGORY = "GrsAI/GPT Image 1K"
 
     def _execute_generation(
         self,
