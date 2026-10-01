@@ -138,6 +138,17 @@ ASPECT_RATIO_STD_MAP: Dict[str, str] = {
     "896x1792 (1:2)": "896x1792",
 }
 
+# 不同 GPT Image 高阶模型支持的质量参数
+GPT_IMAGE_VIP_QUALITY_OPTIONS = ["auto", "low", "medium", "high"]
+GPT_IMAGE_25_QUALITY_OPTIONS = [
+    "auto",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+]
+
 
 def _resolve_aspect_ratio(
     label: Optional[str], mapping: Dict[str, str]
@@ -169,9 +180,7 @@ class GrsaiGPTImage_Node:
         aspect_ratio: str = "auto",
         **kwargs,
     ) -> Tuple[List[Any], List[str], List[str], List[str]]:
-        task_results: Dict[
-            int, Tuple[List[Any], List[str], List[str], List[str]]
-        ] = {}
+        task_results: Dict[int, Tuple[List[Any], List[str], List[str], List[str]]] = {}
 
         def generate_single_image():
             api_client = None
@@ -311,9 +320,7 @@ class GrsaiGPTImage_Node:
     def _create_error_result(
         self, error_message: str, original_image: Optional[torch.Tensor] = None
     ) -> Dict[str, Any]:
-        full_error_message = (
-            f"{error_message}\n接口任务ID: 未创建（请求未成功提交）"
-        )
+        full_error_message = f"{error_message}\n接口任务ID: 未创建（请求未成功提交）"
         print(f"节点执行错误: {full_error_message}")
         if original_image is not None:
             height, width = original_image.shape[1:3]
@@ -362,7 +369,7 @@ class GrsaiGPTImage_Node:
                     b64_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
                     image_data_urls.append(b64_str)
 
-                if not image_data_urls:
+                if images_in and not image_data_urls:
                     return self._create_error_result(
                         "All input images could not be processed."
                     )
@@ -428,9 +435,7 @@ class GrsaiGPTImageVIP_Node:
         aspect_ratio: str = "auto",
         **kwargs,
     ) -> Tuple[List[Any], List[str], List[str], List[str]]:
-        task_results: Dict[
-            int, Tuple[List[Any], List[str], List[str], List[str]]
-        ] = {}
+        task_results: Dict[int, Tuple[List[Any], List[str], List[str], List[str]]] = {}
 
         def generate_single_image():
             api_client = None
@@ -548,6 +553,10 @@ class GrsaiGPTImageVIP_Node:
                     list(ASPECT_RATIO_VIP_MAP.keys()),
                     {"default": "auto"},
                 ),
+                "quality": (
+                    GPT_IMAGE_VIP_QUALITY_OPTIONS,
+                    {"default": "auto"},
+                ),
                 "image_1": ("IMAGE",),
                 "image_2": ("IMAGE",),
                 "image_3": ("IMAGE",),
@@ -556,6 +565,11 @@ class GrsaiGPTImageVIP_Node:
                 "image_6": ("IMAGE",),
                 "image_7": ("IMAGE",),
                 "image_8": ("IMAGE",),
+                "mask": ("IMAGE",),
+                "background": (
+                    ["", "transparent"],
+                    {"default": ""},
+                ),
             },
         }
 
@@ -569,9 +583,7 @@ class GrsaiGPTImageVIP_Node:
     def _create_error_result(
         self, error_message: str, original_image: Optional[torch.Tensor] = None
     ) -> Dict[str, Any]:
-        full_error_message = (
-            f"{error_message}\n接口任务ID: 未创建（请求未成功提交）"
-        )
+        full_error_message = f"{error_message}\n接口任务ID: 未创建（请求未成功提交）"
         print(f"节点执行错误: {full_error_message}")
         if original_image is not None:
             height, width = original_image.shape[1:3]
@@ -594,6 +606,9 @@ class GrsaiGPTImageVIP_Node:
         apikey = kwargs.pop("apikey")
         aspect_ratio_label = kwargs.pop("aspect_ratio", None)
         aspect_ratio = _resolve_aspect_ratio(aspect_ratio_label, ASPECT_RATIO_VIP_MAP)
+        quality = kwargs.pop("quality", "auto")
+        background = kwargs.pop("background", "") or None
+        mask_in = kwargs.pop("mask", None)
         num_images = int(kwargs.pop("num_images", "1"))
 
         # 收集可选输入图像
@@ -606,9 +621,10 @@ class GrsaiGPTImageVIP_Node:
             kwargs.pop(f"image_{i}", None)
 
         image_data_urls: List[str] = []
+        mask_data: Optional[str] = None
 
-        # 若提供了参考图，则将其转换为 base64 data URL
-        if images_in:
+        # 若提供了参考图或遮罩图，则将其转换为 base64
+        if images_in or mask_in is not None:
             try:
                 for image_tensor in images_in:
                     pil_images = tensor_to_pil(image_tensor)
@@ -624,6 +640,17 @@ class GrsaiGPTImageVIP_Node:
                     return self._create_error_result(
                         "All input images could not be processed."
                     )
+
+                if mask_in is not None:
+                    mask_images = tensor_to_pil(mask_in)
+                    if not mask_images:
+                        return self._create_error_result(
+                            "Mask image could not be processed."
+                        )
+
+                    buffered = io.BytesIO()
+                    mask_images[0].save(buffered, format="PNG")
+                    mask_data = base64.b64encode(buffered.getvalue()).decode("utf-8")
             except Exception as e:
                 return self._create_error_result(
                     f"Image encoding failed: {format_error_message(e)}"
@@ -639,6 +666,9 @@ class GrsaiGPTImageVIP_Node:
                     model=model,
                     urls=image_data_urls,
                     aspect_ratio=aspect_ratio,
+                    quality=quality,
+                    background=background,
+                    mask=mask_data,
                 )
         except Exception as e:
             return self._create_error_result(
@@ -655,12 +685,17 @@ class GrsaiGPTImageVIP_Node:
             return self._create_error_result(error_msg + detail)
 
         size_note = f" | aspectRatio: {aspect_ratio}" if aspect_ratio else ""
+        quality_note = f" | quality: {quality}"
+        background_note = (
+            f" | background: {background}" if background is not None else ""
+        )
+        mask_note = " | mask: 已提供" if mask_data is not None else ""
         success_count = min(num_images, len(image_urls))
         failed_count = max(0, num_images - success_count)
         fail_note = f" | 失败: {failed_count} 张" if failed_count > 0 else ""
         task_ids_text = "\n".join(task_ids)
         task_note = f" | 接口任务ID: {', '.join(task_ids)}" if task_ids else ""
-        status = f"GPT Image | 模型: {model}{size_note} | 参考图片: {len(image_data_urls)} 张 | 成功生成: {success_count} 张{fail_note}{task_note}"
+        status = f"GPT Image | 模型: {model}{size_note}{quality_note}{background_note}{mask_note} | 参考图片: {len(image_data_urls)} 张 | 成功生成: {success_count} 张{fail_note}{task_note}"
 
         return {
             "ui": {"string": [status]},
@@ -686,6 +721,10 @@ class GrsaiGPTImage25_Node(GrsaiGPTImageVIP_Node):
                 "gpt-image-2.5-sunburst",
             ],
             {"default": "gpt-image-2.5-flare"},
+        )
+        input_types["optional"]["quality"] = (
+            GPT_IMAGE_25_QUALITY_OPTIONS,
+            {"default": "auto"},
         )
         return input_types
 

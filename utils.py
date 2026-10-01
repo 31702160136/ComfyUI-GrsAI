@@ -10,10 +10,28 @@ from PIL import Image, ImageDraw, ImageFont
 from typing import Optional, Union, List, Tuple
 import torch
 import re
-from urllib.parse import urlparse
+
+try:
+    from .http_client import (
+        TimeoutValue,
+        create_http_session,
+        describe_request_error,
+        normalize_timeout,
+    )
+except ImportError:
+    from http_client import (
+        TimeoutValue,
+        create_http_session,
+        describe_request_error,
+        normalize_timeout,
+    )
 
 
-def download_image(url: str, timeout: int = 30) -> Optional[Image.Image]:
+def download_image(
+    url: str,
+    timeout: TimeoutValue = 30,
+    raise_on_error: bool = False,
+) -> Optional[Image.Image]:
     """
     从URL下载图像
 
@@ -24,18 +42,49 @@ def download_image(url: str, timeout: int = 30) -> Optional[Image.Image]:
     Returns:
         PIL.Image对象，如果下载失败返回None
     """
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 ComfyUI-GrsAI/1.1.5"
+        )
+    }
+    session = create_http_session(headers=headers)
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=timeout)
-        response.raise_for_status()
+        with session.get(
+            url,
+            stream=True,
+            timeout=normalize_timeout(timeout),
+        ) as response:
+            response.raise_for_status()
+            content_type = response.headers.get("Content-Type", "未知")
+            image_buffer = io.BytesIO()
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    image_buffer.write(chunk)
 
-        image = Image.open(io.BytesIO(response.content))
-        return image
-    except Exception as e:
-        print(f"图像下载失败，错误: {str(e)}")
-        return None
+        if image_buffer.tell() == 0:
+            raise ValueError("服务器返回了空文件")
+
+        image_buffer.seek(0)
+        try:
+            image = Image.open(image_buffer)
+            image.load()
+            return image
+        except Exception as exc:
+            raise ValueError(
+                f"服务器返回的内容不是有效图片 (Content-Type: {content_type})"
+            ) from exc
+    except requests.RequestException as exc:
+        error_message = describe_request_error(exc, "图像下载")
+    except Exception as exc:
+        error_message = f"图像下载失败：{exc}"
+    finally:
+        session.close()
+
+    print(f"❌ {error_message} | URL: {url}")
+    if raise_on_error:
+        raise RuntimeError(error_message)
+    return None
 
 
 def _load_preview_font(size: int, bold: bool = False) -> ImageFont.ImageFont:

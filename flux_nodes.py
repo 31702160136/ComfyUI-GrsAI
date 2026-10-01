@@ -78,9 +78,7 @@ class _GrsaiFluxKontextNodeBase:
     def _create_error_result(
         self, error_message: str, original_image: Optional[torch.Tensor] = None
     ) -> Dict[str, Any]:
-        full_error_message = (
-            f"{error_message}\n接口任务ID: 未创建（请求未成功提交）"
-        )
+        full_error_message = f"{error_message}\n接口任务ID: 未创建（请求未成功提交）"
         print(f"节点执行错误: {full_error_message}")
         if original_image is not None:
             height, width = original_image.shape[1:3]

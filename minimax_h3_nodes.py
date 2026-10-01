@@ -14,9 +14,19 @@ import torch
 
 try:
     from .api_client import GrsaiAPI
+    from .http_client import (
+        create_http_session,
+        describe_request_error,
+        normalize_timeout,
+    )
     from .utils import format_error_message, tensor_to_pil
 except ImportError:
     from api_client import GrsaiAPI
+    from http_client import (
+        create_http_session,
+        describe_request_error,
+        normalize_timeout,
+    )
     from utils import format_error_message, tensor_to_pil
 
 try:
@@ -99,12 +109,14 @@ def _audio_to_base64(audio: Dict[str, Any]) -> str:
 
 def _download_video(video_url: str) -> io.BytesIO:
     """下载生成结果，并返回可供 ComfyUI 延迟解码的视频缓冲区。"""
+    session = create_http_session(
+        headers={"User-Agent": "ComfyUI-GrsAI/1.1.5"}
+    )
     try:
-        with requests.get(
+        with session.get(
             video_url,
-            headers={"User-Agent": "ComfyUI-GrsAI/1.0"},
             stream=True,
-            timeout=(30, 300),
+            timeout=normalize_timeout((30, 300)),
         ) as response:
             response.raise_for_status()
             video_buffer = io.BytesIO()
@@ -112,7 +124,9 @@ def _download_video(video_url: str) -> io.BytesIO:
                 if chunk:
                     video_buffer.write(chunk)
     except requests.RequestException as exc:
-        raise RuntimeError(f"视频下载失败: {exc}") from exc
+        raise RuntimeError(describe_request_error(exc, "视频下载")) from exc
+    finally:
+        session.close()
 
     if video_buffer.tell() == 0:
         raise RuntimeError("视频下载失败: API 返回了空文件")

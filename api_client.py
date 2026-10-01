@@ -14,9 +14,19 @@ if TYPE_CHECKING:
 
 try:
     from .config import GrsaiConfig, default_config
+    from .http_client import (
+        create_http_session,
+        describe_request_error,
+        normalize_timeout,
+    )
     from .utils import format_error_message, download_image
 except ImportError:
     from config import GrsaiConfig, default_config
+    from http_client import (
+        create_http_session,
+        describe_request_error,
+        normalize_timeout,
+    )
     from utils import format_error_message, download_image
 
 
@@ -54,7 +64,7 @@ class GrsaiAPI:
 
         self.api_key = normalized_api_key
         self.config = config or default_config
-        self.session = requests.Session()
+        self.session = create_http_session()
         self.last_task_id: Optional[str] = None
         self._setup_session()
 
@@ -83,7 +93,7 @@ class GrsaiAPI:
         self.session.headers.update(
             {
                 "Content-Type": "application/json; charset=utf-8",
-                "User-Agent": "ComfyUI-GrsAI/1.0",
+                "User-Agent": "ComfyUI-GrsAI/1.1.5",
             }
         )
 
@@ -116,6 +126,7 @@ class GrsaiAPI:
         """
         url = f"{self.config.get_config('api_base_url')}{endpoint}"
         timeout = timeout or self.config.get_config("request_timeout", 60)
+        request_timeout = normalize_timeout(timeout)
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}",
@@ -127,14 +138,14 @@ class GrsaiAPI:
                     url,
                     json=data,
                     params=params,
-                    timeout=timeout,
+                    timeout=request_timeout,
                     headers=headers,
                 )
             else:
                 response = self.session.get(
                     url,
                     params=params,
-                    timeout=timeout,
+                    timeout=request_timeout,
                     headers=headers,
                 )
 
@@ -173,10 +184,8 @@ class GrsaiAPI:
                 error_msg = error_detail or "接口未提供具体错误信息"
             raise GrsaiAPIError(f"API请求失败 ({response.status_code}): {error_msg}")
 
-        except requests.exceptions.Timeout:
-            raise GrsaiAPIError("请求超时，请检查网络连接")
-        except requests.exceptions.ConnectionError:
-            raise GrsaiAPIError("网络连接失败，请检查网络设置")
+        except requests.RequestException as exc:
+            raise GrsaiAPIError(describe_request_error(exc, "API 请求")) from exc
         except UnicodeEncodeError as exc:
             raise GrsaiAPIError(
                 "请求未提交：请求头包含无法编码的字符，请检查 API Key 是否误填了中文"
@@ -268,9 +277,9 @@ class GrsaiAPI:
         timeout = self.config.get_config("timeout", 300)
 
         def download_one(index: int, url: str):
-            image = download_image(url, timeout=timeout)
+            image = download_image(url, timeout=timeout, raise_on_error=True)
             if image is None:
-                raise GrsaiAPIError("图像下载失败，可能是网络超时或服务异常")
+                raise GrsaiAPIError("图像下载失败：未返回有效图片")
             return index, image, url
 
         with ThreadPoolExecutor(max_workers=min(len(urls), 8)) as executor:
@@ -310,7 +319,7 @@ class GrsaiAPI:
         request_details = {
             key: value
             for key, value in async_payload.items()
-            if key not in {"prompt", "images"}
+            if key not in {"prompt", "images", "mask"}
         }
 
         print(
