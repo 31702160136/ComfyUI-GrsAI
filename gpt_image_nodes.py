@@ -736,7 +736,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Grsai_GPTImage": "🎨 GrsAI GPT Image",
+    "Grsai_GPTImage_1K": "🎨 GrsAI GPT Image",
     "Grsai_GPTImageVIP": "🎨 GrsAI GPT Image 2 VIP",
     "Grsai_GPTImage25": "🎨 GrsAI GPT Image 2.5 Flare / Sunburst",
 }

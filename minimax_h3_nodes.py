@@ -109,9 +109,7 @@ def _audio_to_base64(audio: Dict[str, Any]) -> str:
 
 def _download_video(video_url: str) -> io.BytesIO:
     """下载生成结果，并返回可供 ComfyUI 延迟解码的视频缓冲区。"""
-    session = create_http_session(
-        headers={"User-Agent": "ComfyUI-GrsAI/1.1.5"}
-    )
+    session = create_http_session(headers={"User-Agent": "ComfyUI-GrsAI/1.1.5"})
     try:
         with session.get(
             video_url,
@@ -138,7 +136,7 @@ class _GrsaiMiniMaxH3NodeBase:
     """GrsAI MiniMax H3 分辨率节点公共实现。"""
 
     FUNCTION = "execute"
-    CATEGORY = "GrsAI/Video"
+    CATEGORY = "GrsAI/Minimax H3"
     RESOLUTION = "768p"
     MAX_DURATION = 15
 
